@@ -1,0 +1,25 @@
+---
+title: |
+  Final Project Report: Statistical Learning (UNL STAT 983)
+author:
+  - name: Alison Kleffner
+    affil: a
+  - name: Sarah Aurit
+    affil: a
+  - name: Emily Robinson
+    affil: a
+affiliation:
+  - num: a
+    address: |
+      Department of Statistics, University of Nebraska - Lincoln,
+bibliography: references.bib
+output: 
+  pdf_document:
+    template: template.tex
+---
+
+```{r setup, include = FALSE}
+# knitr::opts_chunk$set(echo = F, eval = T, fig.path="./images/", fig.env="figure*")
+knitr::opts_chunk$set(echo = F, eval = T)
+```
+
