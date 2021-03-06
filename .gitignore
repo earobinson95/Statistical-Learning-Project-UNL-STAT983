@@ -5,6 +5,10 @@
 .RData
 # User-specific files
 .Ruserdata
+<<<<<<< HEAD
+=======
+.Rproj.user
+>>>>>>> 8c5097a43744881d5a50e4b46d73385fedaadc5d
 # Example code in package build process
 *-Ex.R
 # Output files from R CMD build
@@ -26,5 +30,8 @@ vignettes/*.pdf
 *.knit.md
 # R Environment Variables
 .Renviron
+<<<<<<< HEAD
 .Rproj.user
+=======
+>>>>>>> 8c5097a43744881d5a50e4b46d73385fedaadc5d
 Statistical-Learning-Project-UNL-STAT983.Rproj
