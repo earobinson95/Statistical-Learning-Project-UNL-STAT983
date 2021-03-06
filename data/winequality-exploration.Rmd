@@ -1,0 +1,87 @@
+---
+title: "Wine Quality"
+subtitle: "Data Exploration"
+author: ""
+date: "March 2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	message = FALSE,
+	warning = FALSE,
+	fig.align = "center"
+)
+library(readr)
+library(tidyverse)
+library(knitr)
+library(ggcorrplot)
+```
+
+## Background
+
+The two datasets are related to red and white variants of the Portuguese "Vinho Verde" wine. For more details, consult: http://www.vinhoverde.pt/en/ or the reference [Cortez et al., 2009]. Due to privacy and logistic issues, only physicochemical (inputs) and sensory (the output) variables are available (e.g. there is no data about grape types, wine brand, wine selling price, etc.). These data sets can be viewed as classification or regression tasks. The classes are ordered and not balanced (e.g. there are munch more normal wines than excellent or poor ones). Outlier detection algorithms could be used to detect the few excellent or poor wines. Also, we are not sure if all input variables are relevant. So it could be interesting to test feature selection methods. Additionally, several of the attributes may be correlated, thus it makes sense to apply some sort of feature selection.
+
+## Data summary
+
++ 11 predictor variables
++ red wine - 1599; white wine - 4898
++ Response: quality (score between 0 and 10)
+
+    + See paper for quality category cut-offs
+
+```{r winequality-data}
+winequality_red   <- read_csv("winequality-red.csv") %>% 
+  mutate(type = "red")
+winequality_white <- read_delim("winequality-white.csv", ";", escape_double = FALSE, trim_ws = TRUE) %>%
+  mutate(type = "white")
+
+winequality <- rbind(winequality_red, winequality_white) %>%
+  mutate(type = factor(type))
+rbind(head(winequality), tail(winequality)) %>% 
+  kable()
+```
+
+```{r type, include = FALSE}
+summary(winequality$type) %>% t() %>% kable()
+```
+   
+```{r quality-distribution}
+winequality %>%
+  mutate(quality = factor(quality)) %>%
+  group_by(type, quality) %>%
+  summarise(count = n()) %>%
+  mutate(prop = count/sum(count)) %>%
+  ungroup() %>%
+  ggplot(aes(x = quality, y = prop, fill = quality)) +
+  geom_bar(stat = "identity", show.legend = FALSE) +
+  facet_grid(~type) +
+  theme_bw() +
+  theme(aspect.ratio = 0.8) +
+  scale_fill_viridis_d(end = 0.95) +
+  scale_x_discrete("Quality") +
+  scale_y_continuous(limits = c(0, 0.5), breaks = seq(0, 0.5, 0.1), labels = scales::percent)
+```
+
+```{r multi-colinearity}
+corr <- round(cor(winequality[1:12]), 3)
+p.mat <- cor_pmat(winequality[1:12])
+ggcorrplot(corr, hc.order = TRUE, 
+           type = "lower", 
+           outline.col = "white",
+           colors = c("#6D9EC1", "white", "#E46726"),
+           p.mat = p.mat,
+           lab = TRUE,
+           insig = "blank")
+```
+   
+## Resources
+
+[UCI Machine Learning Repository](https://archive.ics.uci.edu/ml/datasets/Wine+Quality)
+
+[Kaggle](https://www.kaggle.com/uciml/red-wine-quality-cortez-et-al-2009)
+
+P. Cortez, A. Cerdeira, F. Almeida, T. Matos and J. Reis. Modeling wine preferences by data mining from physicochemical properties. In Decision Support Systems, Elsevier, 47(4):547-553. ISSN: 0167-9236. http://dx.doi.org/10.1016/j.dss.2009.05.016.
+
++ In the above reference, two datasets were created, using red and white wine samples. The inputs include objective tests (e.g. PH values) and the output is based on sensory data (median of at least 3 evaluations made by wine experts). Each expert graded the wine quality between 0 (very bad) and 10 (very excellent). Several data mining methods were applied to model these datasets under a regression approach. The support vector machine model achieved the best results. Several metrics were computed: MAD, confusion matrix for a fixed error tolerance (T), etc. Also, we plot the relative importances of the input variables (as measured by a sensitivity analysis procedure).*
