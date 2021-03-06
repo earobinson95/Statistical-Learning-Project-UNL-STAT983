@@ -36,3 +36,16 @@
     + Goal: Establish a stage grouping system.
     + [An Introduction to Recursive Partitioning: Rationale, Application and Characteristics of Classification and Regression Trees, Bagging and Random Forests](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2927982/)
     + I believe RPA is just a fancy term for tree based models. We could compare the different kinds (Random forest, bagging, etc.)?
+    
+### Predict Droughts Using Meteorological and Soil Data
+
++ https://www.kaggle.com/cdminix/us-drought-meteorological-data
++ The goal for this dataset is to try and see if droughts can be predicted using only meteorolical data
++ Classification Problem with 5 levels of drought
++ Each entry is drought level at a specific point in time in a county in the US
++ Already has it broken down into training, validation, and testing, but they did so by year (something to maybe reconsider?)
++ Has 18 Meteorological Predictor Variables (description given in kaggle)
++ Imbalanced data set (most entries in lowest level of drought index) - resampling?
++ Haven't looked for papers, but I'm sure we would be able to find some on this topic
++ Has a UNL Connection in the acknowledgment section!
+
