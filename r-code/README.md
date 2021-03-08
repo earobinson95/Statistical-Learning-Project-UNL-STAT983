@@ -10,7 +10,7 @@
         + (0) "bad" if quality < 6.5
 + Export cleaned data set for modeling to [*winequality-all.csv*](https://github.com/earobinson95/Statistical-Learning-Project-UNL-STAT983/blob/main/data/winequality-all.csv).
 
-### winequality-exploration.Rmd/html
+### [winequality-exploration.Rmd/html](https://earobinson95.github.io/Statistical-Learning-Project-UNL-STAT983/r-code/winequality-exploration.html)
 + Provides data description and summary statistics.
 + Addresses distribution of responses (quality & class).
 + Explore multi-colinearity.
