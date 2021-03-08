@@ -32,14 +32,7 @@ The two datasets are related to red and white variants of the Portuguese "Vinho 
     + See paper for quality category cut-offs
 
 ```{r winequality-data}
-winequality_red   <- read_csv("winequality-red.csv") %>% 
-  mutate(type = "red")
-winequality_white <- read_delim("winequality-white.csv", ";", escape_double = FALSE, trim_ws = TRUE) %>%
-  mutate(type = "white")
-
-winequality <- rbind(winequality_red, winequality_white) %>%
-  mutate(type = factor(type))
-# write.csv(winequality, file = "winequality-all.csv", row.names = F, na = "")
+winequality <- read.csv("../data/winequality-all.csv")
 rbind(head(winequality), tail(winequality)) %>% 
   kable()
 ```
@@ -61,13 +54,30 @@ winequality %>%
   theme_bw() +
   theme(aspect.ratio = 0.8) +
   scale_fill_viridis_d(end = 0.95) +
-  scale_x_discrete("Quality") +
-  scale_y_continuous(limits = c(0, 0.5), breaks = seq(0, 0.5, 0.1), labels = scales::percent)
+  scale_x_discrete("Quality \n (Scale 0 - 10)") +
+  scale_y_continuous("Proportion", limits = c(0, 0.5), breaks = seq(0, 0.5, 0.1), labels = scales::percent)
+```
+
+```{r class-distribution}
+winequality %>%
+  mutate(class = factor(class)) %>%
+  group_by(type, class) %>%
+  summarise(count = n()) %>%
+  mutate(prop = count/sum(count)) %>%
+  ungroup() %>%
+  ggplot(aes(x = class, y = prop, fill = class)) +
+  geom_bar(stat = "identity", show.legend = FALSE) +
+  facet_grid(~type) +
+  theme_bw() +
+  theme(aspect.ratio = 0.8) +
+  scale_fill_viridis_d(begin = 0.4, end = 0.8) +
+  scale_x_discrete("Class \n (1 = Good / 0 = Bad)") +
+  scale_y_continuous("Proportion", limits = c(0, 1), breaks = seq(0, 1, 0.2), labels = scales::percent)
 ```
 
 ```{r multi-colinearity}
-corr <- round(cor(winequality[1:12]), 3)
-p.mat <- cor_pmat(winequality[1:12])
+corr <- round(cor(winequality[c(1, 4:13)]), 3)
+p.mat <- cor_pmat(winequality[c(1, 4:13)])
 ggcorrplot(corr, hc.order = TRUE, 
            type = "lower", 
            outline.col = "white",
