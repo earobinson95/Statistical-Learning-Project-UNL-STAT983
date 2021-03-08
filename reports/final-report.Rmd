@@ -16,10 +16,20 @@ bibliography: references.bib
 output: 
   pdf_document:
     template: template.tex
+preamble:
+  \usepackage[dvipsnames]{xcolor} % colors
+  \newcommand{\er}[1]{{\textcolor{blue}{#1}}}
+  \newcommand{\ak}[1]{{\textcolor{RedViolet}{#1}}}
+  \newcommand{\sa}[1]{{\textcolor{OliveGreen}{#1}}}
 ---
 
 ```{r setup, include = FALSE}
 # knitr::opts_chunk$set(echo = F, eval = T, fig.path="./images/", fig.env="figure*")
 knitr::opts_chunk$set(echo = F, eval = T)
 ```
+
+\er{Emily}
+\ak{Alison}
+\sa{Sarah}
+
 
