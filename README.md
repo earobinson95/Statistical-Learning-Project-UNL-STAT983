@@ -1,10 +1,12 @@
 # Statistical Learning Project (UNL-STAT983)
-## Regression and classification of wine quality from [UCI Machine Learning Repository](https://archive.ics.uci.edu/ml/datasets/Wine+Quality) and [Kaggle](https://www.kaggle.com/uciml/red-wine-quality-cortez-et-al-2009)
-### Collaborators: Alison Kleffner | Sarah Aurit | Emily Robinson 
+## Collaborators: Alison Kleffner | Sarah Aurit | Emily Robinson 
 
-Repository Purpose: Collaboration and project management for final Statistical Learning project.
++ Repository Purpose: Collaboration and project management for final Statistical Learning project.
 
-#### brainstorming
++ Regression and classification of wine quality from [UCI Machine Learning Repository](https://archive.ics.uci.edu/ml/datasets/Wine+Quality) and [Kaggle](https://www.kaggle.com/uciml/red-wine-quality-cortez-et-al-2009)
+
+
+### brainstorming
 
 + contains ideas for final project proposals
 
