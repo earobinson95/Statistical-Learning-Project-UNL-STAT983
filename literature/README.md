@@ -19,3 +19,14 @@
 
 + G. Hu, T. Xi, F. Mohammed and H. Miao, "Classification of wine quality with imbalanced data," 2016 IEEE International Conference on Industrial Technology (ICIT), Taipei, Taiwan, 2016, pp. 1712-1217, doi: 10.1109/ICIT.2016.7475021. (https://ieeexplore.ieee.org/abstract/document/7475021/citations#citations)
 + Seems to be using the white wine data set, so something we can try with both data sets. Also they classified the wines into three different categories: high, normal, poor. 
++ Methods used: Decision tree, adaptive boosting, random forest, and SMOTE for unbalancedness
+
+#### Selection of Important Features and predicting wine quality using Machine Learning Techniques
+
++ Y. Gupta, "Selection of important features and predicting wine quality using Machine learning techniques," In Prcedia Compute Science, 125:305-312. ISSN 1877-0509. https://doi.org/10.1016/j.procs.2017.12.041.
++ Same Data Set
++ Methods Used: Linear Regression, neural network, support vector machine
+
+#### Classification of River Water Quality using Multivariate Analysis (so not wine, but seems like the same idea from the abstract)
++ Azhar S., A. Aris, M. Yusoff, M. Ramli, H. Juahir, "Classification of Water Quality using Mulitvariate Analysis", In Procedia Environmental Sciences (2015), 30:79-84. ISSN 1878-0296.https://doi.org/10.1016/j.proenv.2015.10.014.     
++ Methods Used: Cluster Analysis, Discriminant Analysis, Prinicpical Component Analysis (so seem to be more unsupervised learning, but maybe something to incorporate?)
