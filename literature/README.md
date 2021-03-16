@@ -13,3 +13,9 @@
 #### Using data mining for wine quality assessment
 
 + Cortez, P., Teixeira, J., Cerdeira, A., Almeida, F., Matos, T., & Reis, J. (2009, October). Using data mining for wine quality assessment. In International Conference on Discovery Science (pp. 66-79). Springer, Berlin, Heidelberg. http://dx.doi.org/10.1007/978-3-642-04747-3_8
+
+
+#### Classification of Wine Quality with Imbalanced Data
+
++ G. Hu, T. Xi, F. Mohammed and H. Miao, "Classification of wine quality with imbalanced data," 2016 IEEE International Conference on Industrial Technology (ICIT), Taipei, Taiwan, 2016, pp. 1712-1217, doi: 10.1109/ICIT.2016.7475021. (https://ieeexplore.ieee.org/abstract/document/7475021/citations#citations)
++ Seems to be using the white wine data set, so something we can try with both data sets. Also they classified the wines into three different categories: high, normal, poor. 
