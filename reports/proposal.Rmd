@@ -1,6 +1,8 @@
 ---
 title: |
   Final Project Proposal: Statistical Learning (UNL STAT 983)
+subtitle: | 
+  Imbalanced Classification and Prediction of Wine Quality
 author:
   - name: Sarah Aurit
     affil: a
@@ -32,15 +34,35 @@ knitr::opts_chunk$set(echo = F, eval = T)
 <!-- \ak{Alison}  -->
 <!-- \sa{Sarah} -->
 
-**Needed in Project Proposal (1-3 Pages):**
+#### Needed in Project Proposal (1-3 Pages)
 
 + Project Description
 + How and where we obtained our data (Maybe a quick description of it as well? Link to Kaggle)
 + Scientific Research Questions you may want to address and corresponding machine learning and statistical learning methods
 
+# Introduction
 
++ Industries use quality certifications to promote their products. This takes time and must be evaluated by human experts which can be expensive. \citep{gupta2018selection}
++ Machine learning techniques perform quality assurance process with the help of available characteristics of product and automate the process by minimizing human interfere. The work also identifies the important features to predict the values of dependent variables.
++ Wine has lots of characteristics...
++ Wine quality assessment: 
+    + Physiochemcial: determined by lab tests, no human expert required
+    + Sensory test: Expert required (side note: taste is the sense in which the least is understood about)
+    + Relationship between physiochemical and sensory analysis not understood.
+    + These factors include intrinsic characteristics (visual, taste, smell), environmental (climate, region, site) and management practices (viticultural practice), as well as physicochemical ingredients (acid, pH, etc.). \citep{hu2016classification}
++ Methods of assessment: research in the food industry & machine learning techniques.
 
-#### Classification Methods:
+# Data
+
++ Wine Quality Data Set found at https://archive.ics.uci.edu/ml/datasets/Wine+Quality. \citep{UCIdataset, cortez2009using}
++ Collection of white (4898 samples) and red (1599 samples) wines (Portuguese "Vinho Verde" wine)
++ 12 physiochemical variables: fixed acidity, volatile acidity, citric acid, residual sugar, chlorides, free sulfur dioxide, total sulfur dioxide, density, pH, sulphates, alcohol, and quality rating. 
++ Quality rating is based on a sensory test carried out by at least three sommeliers and scaled in 11 quality classes from 0 - very bad to 10 - very excellent.
++ Separated wine in to 3 classes: (Low Quality: 3, 4; Normal: 5, 6, 7; High Quality: 8, 9)
++ Ordered and imblanced (there are many more normal wines than excellent or poor ones)
++ **Do we need to talk about any preprocessing of data? (e.g. differing magnitudes of some of the predictor variables)**
+ 
+# Classification Methods
 
 In this paper we are going to be looking at two main research questions:
 
@@ -53,4 +75,4 @@ In this paper we are going to be looking at two main research questions:
     - SMOTE - an algorithm where oversample the minority classes (so in this case low quality and high quality). Running the risk of overfitting our model
     - Random under sampler: randomly remove cases of the majority class from the data set. Running the risk of losing valuable infomation in our model.
 
-$\\$Comment: Need to still clean this up and write into paragraphs but want to wait until earlier stuff writeen in order to have it to reference. 
+$\\$Comment: Need to still clean this up and write into paragraphs but want to wait until earlier stuff writen in order to have it to reference. 
