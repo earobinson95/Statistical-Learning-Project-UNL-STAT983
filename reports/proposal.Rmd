@@ -35,7 +35,7 @@ knitr::opts_chunk$set(
 library(readr)
 library(tidyverse)
 library(knitr)
-library(ggcorrplot)
+#library(ggcorrplot)
 ```
 
 <!-- \er{Emily}  -->
@@ -44,11 +44,6 @@ library(ggcorrplot)
 
 <!-- If you put each sentence on a new line, it makes it easier for Github to merge changes if we are all working on the paper. -->
 
-#### Needed in Project Proposal (1-3 Pages)
-
-+ Project Description
-+ How and where we obtained our data (Maybe a quick description of it as well? Link to Kaggle)
-+ Scientific Research Questions you may want to address and corresponding machine learning and statistical learning methods
 
 # Introduction
 
@@ -114,15 +109,7 @@ winequality %>%
  
 # Proposed Methodology
 
-In this paper we are going to be looking at two main research questions:
+In this paper we are going to be looking at two main research questions. The first one focuses on developing a model that would work well to classify wines into three categories, which are: poor quality, normal quality and high quality. As stated in the problem description, it is desirable to classify wines using physicochemical properties since this does not involve human bias that would come into play with human tasters. We plan on using three different classification techniques. The first one is random forests. This is because in prior research this technique seemed to work well just using the white wine data, so we would like to test this method using both white and red wine. Our second method is XGBoost, which is a gradient boosting framework that can be done in R. Previous papers on this data set have used different versions of gradient boosting like adaptive boost. Our final proposed method is KNN, as this seems to be a method that has not yet been used in any sort of wine classification. $\\$
 
-  + Developing a model that would work well to classify new wines into three categories of poor quality, normal quality and high quality.It is desirable to classify wines using physicochemical properties since this does not involve human bias that would come into play with human tasters. Methods we are considering to be Compared:
-      * Random Forests: In prior research, this seems to work well on just the white wine data set, so would look at how this would work using red and white wine. 
-      * XGBoost: gradient boosting framework that can be done in R. Previous papers on this data set have used different versions of gradient boosting like adaptive boost 
-      * KNN
-  + As described above, an issue with our data is the imbalanced nature of the data set, with most of the wines being classified into the normal quality category. So we are interested in looking at different resampling techniques in order to determine. The different methods we are going to compare are:
-    - No resampling
-    - SMOTE - an algorithm where oversample the minority classes (so in this case low quality and high quality). Running the risk of overfitting our model
-    - Random under sampler: randomly remove cases of the majority class from the data set. Running the risk of losing valuable infomation in our model.
-
-$\\$Comment: Need to still clean this up and write into paragraphs but want to wait until earlier stuff writen in order to have it to reference. 
+Additionally, as described above, an issue with our data is the imbalanced nature of the data set, with most of the wines being classified into the normal quality category. So we are also interested in looking at different resampling techniques in order to determine if resampling is necessary here, and if so what kind of resampling method is best. We plan on running each of the classfication methods to find predictions using each of the resampling techniques in order to compare them. So we are first going to look the results of the classfication method predictions if no resampling is done. Since the data is very imbalanced, we would expect this to probably not do well, but it gives a baseline. The second resampling method we will test is SMOTE, which is an algorithm where the minority class (in this case low and high quality), will be oversampled. This method runs the risk of overfitting the mode. The final resampling method that we will look at is random under sampler, where majority class data are randomly removed from the data set. This risks losing valuable information in our model. We are looking for the best prediction model using the combination of resampling and classfication method, which will be determined using MSE.  
+ 
