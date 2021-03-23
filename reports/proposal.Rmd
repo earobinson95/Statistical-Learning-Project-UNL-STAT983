@@ -19,10 +19,12 @@ output:
   pdf_document:
     template: template.tex
 preamble:
+  \usepackage{graphicx}
   \usepackage[dvipsnames]{xcolor} % colors
   \newcommand{\er}[1]{{\textcolor{blue}{#1}}}
   \newcommand{\ak}[1]{{\textcolor{RedViolet}{#1}}}
   \newcommand{\sa}[1]{{\textcolor{OliveGreen}{#1}}}
+  \graphicspath{{}}
 ---
 
 ```{r setup, include=FALSE}
@@ -47,16 +49,16 @@ library(knitr)
 
 # Introduction
 
-Marketing and industry success is often affected by the quality of their products as determined by a quality certification in order to promote the sales of their products. 
+Successful marking campaigns and productive selling strategies are directly linked to communication about key indicators of quality; hence, objective measurements of quality are essential. 
 Within the wine industry, there are two types of quality assessment: physiochemical and sensory tests. 
 Sensory tests require a human expert to assess the quality of wine based on visual, taste, and smell \citep{hu2016classification}. 
 Hiring human experts to conduct sensory tests can take time and be expensive \citep{gupta2018selection}. 
 In addition, taste is the least understood of all human senses \citep{cortez2009using}. 
-Unlike sensory tests, lab tests for measuring the physiochemical characteristics of wine such as acidity and alcohol content do not require a human expert. 
+Unlike sensory tests, laboratory tests for measuring the physiochemical characteristics of wine such as acidity and alcohol content do not require a human expert. 
 The relationship between physiochemcial and sensory analysis is not well understood. 
-Recently, research in the food industry has utilized statistical learning techniques, to evaluate widely available characteristics of wine to automate the quality assessment process by minimizing the need of human experts \citep{gupta2018selection}. 
+Recently, research in the food industry has utilized statistical learning techniques to evaluate widely available characteristics of wine. This type of evaluation allows the automation of quality assessment processes by minimizing the need of human experts \citep{gupta2018selection}. 
 These techniques also have the advantage of identifying important the phsiochemical characteristics that have an impact on the quality of wine as determined by a sensory test. 
-In this report, we will address the challenges of classification with imbalanced data and compare the accuracy of three classification techniques.
+In this report, we will investigate the accuracy of three classification techniques, and also address the challenges of classification with imbalanced data.
 
 # Data
 
@@ -65,7 +67,12 @@ This data set consists of white (4898 samples) and red (1599 samples) Portuguese
 Each wine sample was processed to obtain measures for 11 physiochemical variables: fixed acidity, volatile acidity, citric acid, residual sugar, chlorides, free sulfur dioxide, total sulfur dioxide, density, pH, sulphates, and alcohol. 
 A sensory test conducted by at least three sommeliers was used to determine a quality rating on an 11 point scale from 0 - very bad to 10 - very excellent.
 Following \cite{hu2016classification}, we separated the wine samples in to 3 classes: Low Quality $(\le 4)$, Normal $(5-7)$, and High Quality $(\ge 8)$. 
-This poses a challenge of working with imbalanced classes as there are many more normal wines than low or high quality wines (Figure \ref{fig:class-distribution}). 
+Basic descriptives are provided below; the Mann-Whitney and chi-square tests were used for comparisons of continuous and discrete variables, respectively.
+\begin{figure}
+  \centering
+  \includegraphics{}
+\e.Descriptives.png
+The quality categorization poses a challenge of working with imbalanced classes as there are many more normal wines than low or high quality wines (Figure \ref{fig:class-distribution}). 
 Below, we propose resampling techniques to improve the accuracy of classification.
 
 ```{r data}
@@ -109,7 +116,7 @@ winequality %>%
  
 # Proposed Methodology
 
-In this paper we are going to be looking at two main research questions. The first one focuses on developing a model that would work well to classify wines into three categories, which are: poor quality, normal quality and high quality. As stated in the problem description, it is desirable to classify wines using physicochemical properties since this does not involve human bias that would come into play with human tasters. We plan on using three different classification techniques. The first one is random forests. This is because in prior research this technique seemed to work well just using the white wine data, so we would like to test this method using both white and red wine. Our second method is XGBoost, which is a gradient boosting framework that can be done in R. Previous papers on this data set have used different versions of gradient boosting like adaptive boost. Our final proposed method is KNN, as this seems to be a method that has not yet been used in any sort of wine classification. $\\$
+In this paper we are going to be looking at two main research questions. The first one focuses on developing a model that would work well to classify wines into three categories, which are: poor quality, normal quality and high quality. As stated in the problem description, it is desirable to classify wines using physicochemical properties since this does not involve human bias that would come into play with human tasters. We plan on using three different classification techniques. First, we will utilize random forests given prior investigation of the white wine data showed this technique seemed to work well; we would like to test this method using both white and red wine. Our second method is XGBoost, which is a gradient boosting framework that can be done in R. Previous papers on this data set have used different versions of gradient boosting like adaptive boost. Our final proposed method is KNN, as this seems to be a method that has not yet been used in any sort of wine classification. $\\$
 
-Additionally, as described above, an issue with our data is the imbalanced nature of the data set, with most of the wines being classified into the normal quality category. So we are also interested in looking at different resampling techniques in order to determine if resampling is necessary here, and if so what kind of resampling method is best. We plan on running each of the classfication methods to find predictions using each of the resampling techniques in order to compare them. So we are first going to look the results of the classfication method predictions if no resampling is done. Since the data is very imbalanced, we would expect this to probably not do well, but it gives a baseline. The second resampling method we will test is SMOTE, which is an algorithm where the minority class (in this case low and high quality), will be oversampled. This method runs the risk of overfitting the mode. The final resampling method that we will look at is random under sampler, where majority class data are randomly removed from the data set. This risks losing valuable information in our model. We are looking for the best prediction model using the combination of resampling and classfication method, which will be determined using MSE.  
+Additionally, as described above, an issue with our data is the imbalanced nature of the data set, with most of the wines being classified into the normal quality category. We are also interested in looking at different resampling techniques in order to determine if resampling is necessary here, and to identify which method of resampling method is best. We plan on running each of the classfication methods to find predictions in conjunction with each of the resampling techniques for the sake of comparison. Initially, we will first look at the results of the classfication method predictions if no resampling is done. Since the data is very imbalanced, we would expect this to probably not do well, but it gives a baseline. The second resampling method we will test is SMOTE, which is an algorithm where the minority class (in this case low and high quality), will be oversampled. This method runs the risk of overfitting the mode. The final resampling method that we will look at is random under sampler, where majority class data are randomly removed from the data set. This risks losing valuable information in our model. We are looking for the best prediction model using the combination of resampling and classfication method, which will be determined using MSE.  
  
