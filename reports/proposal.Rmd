@@ -1,10 +1,12 @@
 ---
 title: |
   Final Project Proposal: Statistical Learning (UNL STAT 983)
+subtitle: | 
+  Imbalanced Classification and Prediction of Wine Quality
 author:
-  - name: Alison Kleffner
-    affil: a
   - name: Sarah Aurit
+    affil: a
+  - name: Alison Kleffner
     affil: a
   - name: Emily Robinson
     affil: a
@@ -23,13 +25,91 @@ preamble:
   \newcommand{\sa}[1]{{\textcolor{OliveGreen}{#1}}}
 ---
 
-```{r setup, include = FALSE}
-# knitr::opts_chunk$set(echo = F, eval = T, fig.path="./images/", fig.env="figure*")
-knitr::opts_chunk$set(echo = F, eval = T)
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	message = FALSE,
+	warning = FALSE,
+	fig.align = "center"
+)
+library(readr)
+library(tidyverse)
+library(knitr)
+#library(ggcorrplot)
 ```
 
-\er{Emily}
-\ak{Alison}
-\sa{Sarah}
+<!-- \er{Emily}  -->
+<!-- \ak{Alison}  -->
+<!-- \sa{Sarah} -->
+
+<!-- If you put each sentence on a new line, it makes it easier for Github to merge changes if we are all working on the paper. -->
 
 
+# Introduction
+
+Marketing and industry success is often affected by the quality of their products as determined by a quality certification in order to promote the sales of their products. 
+Within the wine industry, there are two types of quality assessment: physiochemical and sensory tests. 
+Sensory tests require a human expert to assess the quality of wine based on visual, taste, and smell \citep{hu2016classification}. 
+Hiring human experts to conduct sensory tests can take time and be expensive \citep{gupta2018selection}. 
+In addition, taste is the least understood of all human senses \citep{cortez2009using}. 
+Unlike sensory tests, lab tests for measuring the physiochemical characteristics of wine such as acidity and alcohol content do not require a human expert. 
+The relationship between physiochemcial and sensory analysis is not well understood. 
+Recently, research in the food industry has utilized statistical learning techniques, to evaluate widely available characteristics of wine to automate the quality assessment process by minimizing the need of human experts \citep{gupta2018selection}. 
+These techniques also have the advantage of identifying important the phsiochemical characteristics that have an impact on the quality of wine as determined by a sensory test. 
+In this report, we will address the challenges of classification with imbalanced data and compare the accuracy of three classification techniques.
+
+# Data
+
+We will be working with the "Wine Quality Data Set" found on the UCI Data Repository at https://archive.ics.uci.edu/ml/datasets/Wine+Quality. \citep{UCIdataset, cortez2009using}. 
+This data set consists of white (4898 samples) and red (1599 samples) Portuguese "Vinho Verde" wine samples. 
+Each wine sample was processed to obtain measures for 11 physiochemical variables: fixed acidity, volatile acidity, citric acid, residual sugar, chlorides, free sulfur dioxide, total sulfur dioxide, density, pH, sulphates, and alcohol. 
+A sensory test conducted by at least three sommeliers was used to determine a quality rating on an 11 point scale from 0 - very bad to 10 - very excellent.
+Following \cite{hu2016classification}, we separated the wine samples in to 3 classes: Low Quality $(\le 4)$, Normal $(5-7)$, and High Quality $(\ge 8)$. 
+This poses a challenge of working with imbalanced classes as there are many more normal wines than low or high quality wines (Figure \ref{fig:class-distribution}). 
+Below, we propose resampling techniques to improve the accuracy of classification.
+
+```{r data}
+winequality <- read.csv("../data/winequality-all.csv")
+```
+
+```{r quality-distribution,include = FALSE}
+winequality %>%
+  mutate(quality = factor(quality)) %>%
+  group_by(type, quality) %>%
+  summarise(count = n()) %>%
+  mutate(prop = count/sum(count)) %>%
+  ungroup() %>%
+  ggplot(aes(x = quality, y = prop, fill = quality)) +
+  geom_bar(stat = "identity", show.legend = FALSE) +
+  facet_grid(~type) +
+  theme_bw() +
+  theme(aspect.ratio = 0.8) +
+  scale_fill_viridis_d(end = 0.95) +
+  scale_x_discrete("Quality \n (Scale 0 - 10)") +
+  scale_y_continuous("Proportion", limits = c(0, 0.5), breaks = seq(0, 0.5, 0.1), labels = scales::percent)
+```
+
+```{r class-distribution, fig.height = 2.5, fig.width = 5, fig.align = 'center', fig.cap = "Wine quality class imbalance."}
+winequality %>%
+  mutate(qualityclass = factor(qualityclass, levels = c("Low", "Normal", "High"))) %>%
+  group_by(type, qualityclass) %>%
+  summarise(count = n()) %>%
+  mutate(prop = count/sum(count)) %>%
+  ungroup() %>%
+  ggplot(aes(x = qualityclass, y = prop, fill = qualityclass, label = paste(100*round(prop, 3), "%", sep = ""))) +
+  geom_bar(stat = "identity", show.legend = FALSE) +
+  geom_text(vjust = -0.5, size = 3) +
+  facet_grid(~type) +
+  theme_bw() +
+  theme(aspect.ratio = 0.6) +
+  scale_fill_viridis_d(begin = 0.4, end = 0.8) +
+  scale_x_discrete("Quality Class") +
+  scale_y_continuous("Proportion", limits = c(0, 1.1), breaks = seq(0, 1, 0.2), labels = scales::percent)
+```
+ 
+# Proposed Methodology
+
+In this paper we are going to be looking at two main research questions. The first one focuses on developing a model that would work well to classify wines into three categories, which are: poor quality, normal quality and high quality. As stated in the problem description, it is desirable to classify wines using physicochemical properties since this does not involve human bias that would come into play with human tasters. We plan on using three different classification techniques. The first one is random forests. This is because in prior research this technique seemed to work well just using the white wine data, so we would like to test this method using both white and red wine. Our second method is XGBoost, which is a gradient boosting framework that can be done in R. Previous papers on this data set have used different versions of gradient boosting like adaptive boost. Our final proposed method is KNN, as this seems to be a method that has not yet been used in any sort of wine classification. $\\$
+
+Additionally, as described above, an issue with our data is the imbalanced nature of the data set, with most of the wines being classified into the normal quality category. So we are also interested in looking at different resampling techniques in order to determine if resampling is necessary here, and if so what kind of resampling method is best. We plan on running each of the classfication methods to find predictions using each of the resampling techniques in order to compare them. So we are first going to look the results of the classfication method predictions if no resampling is done. Since the data is very imbalanced, we would expect this to probably not do well, but it gives a baseline. The second resampling method we will test is SMOTE, which is an algorithm where the minority class (in this case low and high quality), will be oversampled. This method runs the risk of overfitting the mode. The final resampling method that we will look at is random under sampler, where majority class data are randomly removed from the data set. This risks losing valuable information in our model. We are looking for the best prediction model using the combination of resampling and classfication method, which will be determined using MSE.  
+ 
