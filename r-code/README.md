@@ -24,3 +24,9 @@
 + Function for calculating classification errors
     + Contingency table 
     + Misclassification rate
+    
+    
+### resampling-methods.R
++ Create the oversample and undersample training data to work with our imbalanced data.
+
+
