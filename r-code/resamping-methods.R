@@ -67,3 +67,21 @@ data <- SMOTEData$data
 table(data$class) 
 
 ### Undersampling Method ###
+
+#Manual Method (How many would we want in the other group?)
+#https://rstudio-pubs-static.s3.amazonaws.com/607601_57a11284917f4d79933f4c4db3d41713.html
+#Pick how many we want in the majority class
+
+df_wine_0_ind <- which(train_wine$binary_class == 0)
+df_wine_1_ind <- which(train_wine$binary_class == 1)
+
+### setting negative counts to be same as positive counts - so that the data is balanced
+nsample <- 2000
+pick_0 <- sample(df_wine_0_ind, nsample)
+
+undersample_wine <- train_wine[c(df_wine_1_ind, pick_0), ]
+
+table(undersample_wine$binary_class) 
+
+#Can also use ovun.sample to do random oversampling and undersampling
+#https://s3.amazonaws.com/assets.datacamp.com/production/course_8916/slides/chapter3.pdf
