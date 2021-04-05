@@ -1,0 +1,17 @@
+\clearpage
+\appendix
+```{r setup2, include = FALSE}
+knitr::opts_chunk$set(echo = T, 
+                      eval = F,
+                      warning = F,
+                      message = F,
+	                    fig.align = "center")
+```
+
+# Code \label{app:code}
+
+Need to work on "Environment shaded undefined".
+
+```{r code-appendix, echo = F}
+sample(seq(1,5),1)
+```
