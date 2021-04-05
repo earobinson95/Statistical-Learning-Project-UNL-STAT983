@@ -23,7 +23,7 @@ winequality_normal <- filter(winequality, qualityclass %in% c('Normal'))
 winequality_normal$binary_class <- 0
 
 winequality <- rbind(winequality_normal,winequality_rare)
-
+write.csv(winequality, "winequality_binary.csv")
 
 #Generate a random training and testing data set
 #defintely can change this later, just needed something for now
@@ -85,3 +85,22 @@ table(undersample_wine$binary_class)
 
 #Can also use ovun.sample to do random oversampling and undersampling
 #https://s3.amazonaws.com/assets.datacamp.com/production/course_8916/slides/chapter3.pdf
+
+
+#################
+###Functions for Resampling Methods
+#################
+
+#Undersampling
+
+undersample <- function(train_df, nsample){
+df_wine_0_ind <- which(train_df$binary_class == 0)
+df_wine_1_ind <- which(train_df$binary_class == 1)
+pick_0 <- sample(df_wine_0_ind, nsample)
+undersample_wine <- train_df[c(df_wine_1_ind,pick_0),]
+table(undersample_wine$binary_class) 
+}
+
+#I think this is working properly.
+#Just need to enter in the data set and the number we want in our majority class
+undersample(winequality,2000)
