@@ -28,5 +28,5 @@
     
 ### resampling-methods.R
 + Create the oversample and undersample training data to work with our imbalanced data.
-
++ Has functions for our chosen over and under sampling methods to use with different training sets.
 
