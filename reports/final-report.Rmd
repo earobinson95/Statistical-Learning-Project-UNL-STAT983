@@ -156,6 +156,13 @@ Additionally, as described above, an issue with our data is the imbalanced natur
 # Methods
 
 ## Resampling
+Before we are able to consider the different classification methods, the imbalanced issue in our data must be examined. This is because typical classifier algorithms assume a relatively balanced distribution, so with imbalanced data they tend to be biased towards the majority class [Yanminsun, 2011]. Classification rules for the minority classes tend to be undiscovered or ignored, so the minority class is misclassified more often than the majority class. If we were to look at our data set from a binary standpoint where “Low” and “High” were classified as rare, and “Normal” was classified as not rare, the majority class has 6053 observations, and the minority class has 444 observations, which is a ratio of about 13:1. So due to this imbalanced nature in the data, classifying algorithms will be biased towards classifying wines as Normal, and causing poor predictions for the Low and High classes. When creating the resampled data sets, the binary classification of “rare” and “not rare” is used due to the resampling algorithms needing a binary class. 
+
+A method on how to deal with the imbalanced issue in the data is through resampling the original data set either by oversampling the majority class, or undersampling the minority class. The goal with these methods is to create a data set that has close to a balanced class distribution, so the classifying algorithms will have better predictions, so it will predict to the minority class more accurately [Chawla, 2013]. The oversampling method involves replicating the minority class and creating synthetic data, or creating new instances using heuristics.  This method tends to have an overfitting problem, where it’ll predict the minority class more than it should. The undersampling method removes instances from the majority class randomly or using some heuristics. Since data is being removed, potentially valuable information is not considered [Hu et al, 2016]. To see how valuable resampling is in our data set, we ran the classifying algorithms with just using the original imbalanced data set, randomly undersampling method, and SMOTE, which is an oversampling method. 
+
+The undersampling method that we considered is random undersampling.  In this method, instances of the majority class are discarded at random until reaches balanced with the minority class [Chawla, 2013]. For example, say there are 1000 observations in the majority class, and 100 in the minority class, observations in the majority class will be randomly discarded until this class is also 100. The benefit of this method is that since the data frame is being reduced, it is less costly. However,  potentially useful information is discarded, which may make the decision boundary between the majority and minority class less clear, causing a decrease in prediction performance [Chawla, 2013]. 
+
+SMOTE, which stands for Synthetic Minority Over-Sampling Technique, is an oversampling technique which uses interpolation of the minority class to create synthetic data. The process begins by finding the k nearest neighbors of each observation of the minority class based on some distance measure. Then a point between the minority class observation and one of its nearest neighbors is randomly picked by first finding the difference between the observation and its nearest neighbor. This difference is then multiplied by a random number between 0 and 1. This is then added to the observation, which becomes the new synthetic data point that is then added to the data set [Chawla, 2002].  In Hu et al, the used k=5, so that is what we used to create our resampled data set [2016]. Oversampling tend to have an overfitting problem since now the minority class extends into the majority space, however this generally poses less of an issue with SMOTE [Luego, 2010].  
 
 ## Classification
 
@@ -164,14 +171,14 @@ Additionally, as described above, an issue with our data is the imbalanced natur
 # Conclusion
 
 ```{r, include = F}
-# devtools::install_github("crsh/papaja")
-library(papaja)
-render_appendix(
-  "appendix.Rmd",
-  bibliography = rmarkdown::metadata$bibliography,
-  csl = rmarkdown::metadata$csl,
-  quiet = TRUE
-)
+# devtools::install_github("crsh/papaja") Alison - I'm commenting this all out for now
+#library(papaja)
+#render_appendix(
+  #"appendix.Rmd",
+  #bibliography = rmarkdown::metadata$bibliography,
+  #csl = rmarkdown::metadata$csl,
+  #quiet = TRUE
+#)
 ```
 
 
