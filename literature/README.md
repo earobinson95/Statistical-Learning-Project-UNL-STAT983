@@ -50,3 +50,14 @@
 #### Support Vector Regression
 
 + https://rpubs.com/richkt/280840
+
+
+#### Resampling
++ Yanminsun, & Wong, Andrew & Kamel, Mohamed S.. (2011). Classification of imbalanced data: a review. International Journal of Pattern Recognition and Artificial Intelligence. 23. 10.1142/S0218001409007326
++ Chawla, N.V., Hoens, T.R. (2013). Imbalanced Datasets: from sampling to classifiers. Imbalanced Learning: Foundations, Algorithms, and Applications, First Edition.
++ Chawla, N. V., Bowyer, K. W., Hall, L. O., & Kegelmeyer, W. P. (2002). SMOTE: Synthetic Minority Over-sampling Technique (Vol. 16, pp. 321-357, Tech.). Journal of Artificial Intelligence Research. doi:https://doi.org/10.1613/jair.953
++ Luengo, J, Fernandez A, Garcia, S, Herrera F. (2010). Addressing data complexity for imbalanced data sets: analysis of SMOTE-based oversampling and evolutionary undersampling (Vol 15, pp.1909-1936). Springer. doi: 10.1007/s00500-010-0625-8
+
+
+
+
