@@ -59,6 +59,10 @@ $for(header-includes)$
 $header-includes$
 $endfor$
 
+$if(highlighting-macros)$
+$highlighting-macros$
+$endif$
+
 \title{$title$ \\ $subtitle$}
 \author{by $for(author)$$author.name$$sep$, $endfor$}
 
@@ -81,6 +85,7 @@ $endif$
 $for(include-after)$
 $include-after$
 $endfor$
+
 \end{document}
 
 

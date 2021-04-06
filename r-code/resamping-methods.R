@@ -23,7 +23,7 @@ winequality_normal <- filter(winequality, qualityclass %in% c('Normal'))
 winequality_normal$binary_class <- 0
 
 winequality <- rbind(winequality_normal,winequality_rare)
-
+write.csv(winequality, "winequality_binary.csv")
 
 #Generate a random training and testing data set
 #defintely can change this later, just needed something for now
@@ -85,3 +85,40 @@ table(undersample_wine$binary_class)
 
 #Can also use ovun.sample to do random oversampling and undersampling
 #https://s3.amazonaws.com/assets.datacamp.com/production/course_8916/slides/chapter3.pdf
+
+
+#################
+###Functions for Resampling Methods
+#################
+
+#Undersampling
+
+undersample <- function(train_df, nsample){
+df_wine_0_ind <- which(train_df$binary_class == 0)
+df_wine_1_ind <- which(train_df$binary_class == 1)
+pick_0 <- sample(df_wine_0_ind, nsample)
+undersample_wine <- train_df[c(df_wine_1_ind,pick_0),] #Final Data frame
+#table(undersample_wine$binary_class) have just to make sure it's all balancing out how I think
+}
+
+#I think this is working properly.
+#Just need to enter in the data set and the number we want in our majority class
+undersample(winequality,2000)
+
+
+#Oversampling (using smotefamily package)
+
+oversample <- function(train_df, k){
+  SMOTEData <- SMOTE(train_df[,c(4:14)], train_df[,15], K = k, dup_size = 0)
+  oversample_df <- SMOTEData$data #Final data frame
+  #table(oversample_df$class) have just to make sure it's all balancing out how I think 
+}
+
+#Just need the training data set and number of nearest neighbors
+#This might take a while to run if have a bunch of different samples running
+oversample(winequality, 5)
+
+#Should generate training and testing sets from winequality_binary.csv
+
+
+
