@@ -116,15 +116,15 @@ winequality %>%
 ```
 
 ```{r descriptives}
-# https://cran.r-project.org/web/packages/Gmisc/vignettes/Descriptives.html;
-# For labeling we use the label() function from the Hmisc package
+#https://cran.r-project.org/web/packages/Gmisc/vignettes/Descriptives.html;
+#For labeling we use the label() function from the Hmisc package
 install.packages("Hmisc")
 install.packages("Gmisc")
 library(Hmisc)
 library(Gmisc)
 data(winequality)
 
-# Style all the table output using htmlTable's theme handler
+#Style all of the table output using htmlTable's theme handler
 htmlTable::setHtmlTableTheme(css.rgroup = "")
 
 winequality$qualityclass <- factor(winequality$qualityclass, levels=c("Low","Normal","High"),
@@ -167,9 +167,18 @@ getTable1Stats <- function(x, digits = 0, ...){
 }
 
 t1 <- list()
-t1[["Quality"]] <- getTable1Stats(winequality$qualityclass)
+t1[["Type"]] <- getTable1Stats(winequality$type)
 t1[["Fixed Acidity"]] <- getTable1Stats(winequality$fixed.acidity)
 t1[["Volatile Acidity"]] <- getTable1Stats(winequality$volatile.acidity)
+t1[["CitricAcidity"]] <- getTable1Stats(winequality$citric.acid)
+t1[["Residual Sugar"]] <- getTable1Stats(winequality$residual.sugar)
+t1[["Chlorides"]] <- getTable1Stats(winequality$chlorides)
+t1[["Free Sulfur Dioxide"]] <- getTable1Stats(winequality$free.sulfur.dioxide)
+t1[["Total Sulfur Dioxide"]] <- getTable1Stats(winequality$total.sulfur.dioxide)
+t1[["Density"]] <- getTable1Stats(winequality$density)
+t1[["pH"]] <- getTable1Stats(winequality$pH)
+t1[["Sulphates"]] <- getTable1Stats(winequality$sulphates)
+t1[["Alcohol"]] <- getTable1Stats(winequality$alcohol)
 
 mergeDesc(t1,
           htmlTable_args = list(caption  = "Basic Descriptive Statistics from the Wine Quality Dataset"))
@@ -182,5 +191,41 @@ t1
 
 In this paper we are going to be looking at two main research questions. The first one focuses on developing a model that would work well to classify wines into three categories, which are: poor quality, normal quality and high quality. As stated in the problem description, it is desirable to classify wines using physicochemical properties since this does not involve human bias that would come into play with human tasters. We plan on using three different classification techniques. First, we will utilize random forests given prior investigation of the white wine data showed this technique seemed to work well; we would like to test this method using both white and red wine. Our second method is XGBoost, which is a gradient boosting framework that can be done in R. Previous papers on this data set have used different versions of gradient boosting like adaptive boost. Our final proposed method is KNN, as this seems to be a method that has not yet been used in any sort of wine classification. $\\$
 
-Additionally, as described above, an issue with our data is the imbalanced nature of the data set, with most of the wines being classified into the normal quality category. We are also interested in looking at different resampling techniques in order to determine if resampling is necessary here, and to identify which method of resampling method is best. We plan on running each of the classfication methods to find predictions in conjunction with each of the resampling techniques for the sake of comparison. Initially, we will first look at the results of the classfication method predictions if no resampling is done. Since the data is very imbalanced, we would expect this to probably not do well, but it gives a baseline. The second resampling method we will test is SMOTE, which is an algorithm where the minority class (in this case low and high quality), will be oversampled. This method runs the risk of overfitting the mode. The final resampling method that we will look at is random under sampler, where majority class data are randomly removed from the data set. This risks losing valuable information in our model. We are looking for the best prediction model using the combination of resampling and classfication method, which will be determined using MSE.  
+Additionally, as described above, an issue with our data is the imbalanced nature of the data set, with most of the wines being classified into the normal quality category. We are also interested in looking at different resampling techniques in order to determine if resampling is necessary here, and to identify which method of resampling method is best. We plan on running each of the classfication methods to find predictions in conjunction with each of the resampling techniques for the sake of comparison. Initially, we will first look at the results of the classfication method predictions if no resampling is done. Since the data is very imbalanced, we would expect this to probably not do well, but it gives a baseline. The second resampling method we will test is SMOTE, which is an algorithm where the minority class (in this case low and high quality), will be oversampled. This method runs the risk of overfitting the mode. The final resampling method that we will look at is random under sampler, where majority class data are randomly removed from the data set. This risks losing valuable information in our model. We are looking for the best prediction model using the combination of resampling and classfication method, which will be determined using MSE. 
+
+```{r Random Forest}
+install.packages("randomForest")
+library(randomForest)
+
+set.seed(220355)
+
+#Create Loop i = 1 to B
+
+#Fit Random Forest Model with Data
+model1 <- randomForest(quality ~ ., data=winequality_i) #replace with data, also move to classification
+model1
+which.min(model1$mse) #number of trees that produce the lowest test MSE
+sqrt(model1$mse[which.min(model1$mse)]) #find RMSE of best model
+plot(model1)
+varImpPlot(model1) #need to remove quality variable
+
+#Tune the model
+a=c()
+i=5
+for (i in 3:8) {
+    model1_tuned <- randomForest(quality ~ ., data=winequality_i, ntree=500, mtry=i,importance=TRUE) 
+    predtune <- predict(model1_tuned, winequality_i, type="class") 
+    a[i-2] = mean(predtune == winequality_i$quality) 
+}
+a
+plot(3:8,a)
+
+#Fit Random Forest Model 
+predTest <- predict(model1_tuned, winequality_i, type="class") 
+mean(predTest ==winequality_i$qualityclass) 
+table(predTest, winequality_i$qualityclass) 
+importance(model1_tuned)
+varImpPlot(model1_tuned)
+
+```
  
