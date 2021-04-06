@@ -106,7 +106,7 @@ undersample_wine <- train_df[c(df_wine_1_ind,pick_0),] #Final Data frame
 undersample(winequality,2000)
 
 
-#Oversampling
+#Oversampling (using smotefamily package)
 
 oversample <- function(train_df, k){
   SMOTEData <- SMOTE(train_df[,c(4:14)], train_df[,15], K = k, dup_size = 0)
@@ -114,7 +114,7 @@ oversample <- function(train_df, k){
   #table(oversample_df$class) have just to make sure it's all balancing out how I think 
 }
 
-#Just need the training data set
+#Just need the training data set and number of nearest neighbors
 #This might take a while to run if have a bunch of different samples running
 oversample(winequality, 5)
 
