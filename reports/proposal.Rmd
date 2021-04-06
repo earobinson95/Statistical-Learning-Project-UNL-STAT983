@@ -37,7 +37,6 @@ knitr::opts_chunk$set(
 library(readr)
 library(tidyverse)
 library(knitr)
-#library(ggcorrplot)
 ```
 
 <!-- \er{Emily}  -->
@@ -115,11 +114,19 @@ winequality %>%
   scale_y_continuous("Proportion", limits = c(0, 1.1), breaks = seq(0, 1, 0.2), labels = scales::percent)
 ```
 
+<<<<<<< HEAD
 ```{r descriptives}
 #https://cran.r-project.org/web/packages/Gmisc/vignettes/Descriptives.html;
 #For labeling we use the label() function from the Hmisc package
 install.packages("Hmisc")
 install.packages("Gmisc")
+=======
+```{r descriptives, message=FALSE, warning=FALSE}
+# https://cran.r-project.org/web/packages/Gmisc/vignettes/Descriptives.html;
+# For labeling we use the label() function from the Hmisc package
+# install.packages("Hmisc")
+# install.packages("Gmisc")
+>>>>>>> 8997523d6598d70c056e73498b3f7b231cda9dcb
 library(Hmisc)
 library(Gmisc)
 data(winequality)
