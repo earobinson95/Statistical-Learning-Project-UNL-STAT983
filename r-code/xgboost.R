@@ -68,7 +68,7 @@ xgbFunc <-
     
   }
 
-# xgbFunc(max.depth = 20, eta = 0.0001)
+xgbFunc(max.depth = 20, eta = 0.0001)
 
 # MCMC FUNCTION WITH PARALLEL COMPUTING
 xgbMCMC <- 
@@ -100,7 +100,7 @@ xgbMCMC <-
 
 # HYPERPARAMETER GRID SEARCH
 tic()
-xgbMCMC.results <- xgbMCMC(B = 50, max.depth = 20, eta = 1e-4, nround = 4, nthread = 2)
+xgbMCMC.results <- xgbMCMC(B = 5, max.depth = c(10, 15, 20), eta = 1e-4, nround = 4, nthread = 2)
 toc()
 
 xgbMCMC.results %>% arrange(-mean)

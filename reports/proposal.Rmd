@@ -1,29 +1,27 @@
 ---
-title: |
+title: "|"
   Final Project Proposal: Statistical Learning (UNL STAT 983)
-subtitle: | 
-  Imbalanced Classification and Prediction of Wine Quality
 author:
-  - name: Sarah Aurit
-    affil: a
-  - name: Alison Kleffner
-    affil: a
-  - name: Emily Robinson
-    affil: a
-affiliation:
-  - num: a
-    address: |
-      Department of Statistics, University of Nebraska - Lincoln,
-bibliography: references.bib
-output: 
+- name: Sarah Aurit
+  affil: a
+- name: Alison Kleffner
+  affil: a
+- name: Emily Robinson
+  affil: a
+subtitle: |
+  Imbalanced Classification and Prediction of Wine Quality
+output:
+  html_document:
+    df_print: paged
   pdf_document:
     template: template.tex
-preamble:
-  \usepackage{graphicx}
-  \usepackage[dvipsnames]{xcolor} % colors
-  \newcommand{\er}[1]{{\textcolor{blue}{#1}}}
-  \newcommand{\ak}[1]{{\textcolor{RedViolet}{#1}}}
-  \newcommand{\sa}[1]{{\textcolor{OliveGreen}{#1}}}
+bibliography: references.bib
+affiliation:
+- num: a
+  address: |
+    Department of Statistics, University of Nebraska - Lincoln,
+preamble: \usepackage{graphicx} \usepackage[dvipsnames]{xcolor} % colors \newcommand{\er}[1]{{\textcolor{blue}{#1}}}
+  \newcommand{\ak}[1]{{\textcolor{RedViolet}{#1}}} \newcommand{\sa}[1]{{\textcolor{OliveGreen}{#1}}}
   \graphicspath{{}}
 ---
 
@@ -114,28 +112,20 @@ winequality %>%
   scale_y_continuous("Proportion", limits = c(0, 1.1), breaks = seq(0, 1, 0.2), labels = scales::percent)
 ```
 
-<<<<<<< HEAD
 ```{r descriptives}
-#https://cran.r-project.org/web/packages/Gmisc/vignettes/Descriptives.html;
-#For labeling we use the label() function from the Hmisc package
-install.packages("Hmisc")
-install.packages("Gmisc")
-=======
-```{r descriptives, message=FALSE, warning=FALSE}
 # https://cran.r-project.org/web/packages/Gmisc/vignettes/Descriptives.html;
 # For labeling we use the label() function from the Hmisc package
 # install.packages("Hmisc")
 # install.packages("Gmisc")
->>>>>>> 8997523d6598d70c056e73498b3f7b231cda9dcb
 library(Hmisc)
 library(Gmisc)
-data(winequality)
+# data(winequality)
 
 #Style all of the table output using htmlTable's theme handler
 htmlTable::setHtmlTableTheme(css.rgroup = "")
 
 winequality$qualityclass <- factor(winequality$qualityclass, levels=c("Low","Normal","High"),
-                            labels=c("Low (N=246)","Normal (N=6,053)","High (N=198)")) 
+                            labels=c("Low (N=246)","Normal (N=6,053)","High (N=198)"))
 winequality$type <- factor(winequality$type, levels=c("red","white"),
                     labels=c("Red Wine","White Wine"))
 
@@ -165,7 +155,7 @@ label(winequality$alcohol)              <- "Alcohol"
 units(winequality$alcohol)              <- "(volume %), median (IQR)"
 
 getTable1Stats <- function(x, digits = 0, ...){
-  getDescriptionStatsBy(x = x, 
+  getDescriptionStatsBy(x = x,
                         by = winequality$qualityclass,
                         digits = digits,
                         continuous_fn = describeMedian,
@@ -200,7 +190,7 @@ In this paper we are going to be looking at two main research questions. The fir
 
 Additionally, as described above, an issue with our data is the imbalanced nature of the data set, with most of the wines being classified into the normal quality category. We are also interested in looking at different resampling techniques in order to determine if resampling is necessary here, and to identify which method of resampling method is best. We plan on running each of the classfication methods to find predictions in conjunction with each of the resampling techniques for the sake of comparison. Initially, we will first look at the results of the classfication method predictions if no resampling is done. Since the data is very imbalanced, we would expect this to probably not do well, but it gives a baseline. The second resampling method we will test is SMOTE, which is an algorithm where the minority class (in this case low and high quality), will be oversampled. This method runs the risk of overfitting the mode. The final resampling method that we will look at is random under sampler, where majority class data are randomly removed from the data set. This risks losing valuable information in our model. We are looking for the best prediction model using the combination of resampling and classfication method, which will be determined using MSE. 
 
-```{r Random Forest}
+```{r Random-Forest}
 install.packages("randomForest")
 library(randomForest)
 
@@ -209,7 +199,7 @@ set.seed(220355)
 #Create Loop i = 1 to B
 
 #Fit Random Forest Model with Data
-model1 <- randomForest(quality ~ ., data=winequality_i) #replace with data, also move to classification
+model1 <- randomForest(qualityclass ~ ., method = "class", data=winequality) #replace with data, also move to classification
 model1
 which.min(model1$mse) #number of trees that produce the lowest test MSE
 sqrt(model1$mse[which.min(model1$mse)]) #find RMSE of best model

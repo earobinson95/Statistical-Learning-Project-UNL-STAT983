@@ -112,11 +112,12 @@ oversample <- function(train_df, k){
   SMOTEData <- SMOTE(train_df[,c(4:14)], train_df[,15], K = k, dup_size = 0)
   oversample_df <- SMOTEData$data #Final data frame
   #table(oversample_df$class) have just to make sure it's all balancing out how I think 
+  return(oversample_df)
 }
 
 #Just need the training data set and number of nearest neighbors
 #This might take a while to run if have a bunch of different samples running
-oversample(winequality, 5)
+train.data <- oversample(winequality, 5)
 
 #Should generate training and testing sets from winequality_binary.csv
 
