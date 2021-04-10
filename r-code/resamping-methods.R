@@ -121,5 +121,25 @@ train.data <- oversample(winequality, 5)
 
 #Should generate training and testing sets from winequality_binary.csv
 
+######################333
+#Do separately for low and high
+winequality_low <- filter(winequality, qualityclass == "Low")
+winequality_norm <- filter(winequality, qualityclass == "Normal")
+winequality_high <- filter(winequality, qualityclass == "High")
+winequality_high$binary_class <- 2
 
+set.seed(44)
 
+wine<- sort(sample(nrow(winequality_norm), nrow(winequality_norm)*0.5))
+winequality_norm1 <- winequality_norm[wine,]
+winequality_norm2 <- winequality_norm[-wine,]
+
+wine_LN <- rbind(winequality_low,winequality_norm1)
+wine_HN <- rbind(winequality_high,winequality_norm2)
+
+train.data_LH <- oversample(wine_LN, 5)
+train.data_HN <- oversample(wine_HN, 5)
+
+train <- rbind(train.data_HN,train.data_LH)
+
+table(train$class)
