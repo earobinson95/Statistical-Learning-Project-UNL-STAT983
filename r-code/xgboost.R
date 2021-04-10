@@ -137,26 +137,47 @@ xgbFunc <-
              label = factor(label, levels = c("Low", "Normal", "High")))
     
     # evaluated prediction
-    accuracy <- mean(xgb.pred$prediction==xgb.pred$label)
-    table    <- with(xgb.pred, table(prediction, label))
+    accuracy.all  <- mean(xgb.pred$prediction==xgb.pred$label)
+    table    <- with(xgb.pred, table(label, prediction))
+    prop.table <- table/rowSums(table)
+    accuracy.low    <- prop.table[1,1]
+    accuracy.normal <- prop.table[2,2]
+    accuracy.high   <- prop.table[3,3]
+    accuracy <- cbind(accuracy.all, accuracy.low, accuracy.normal, accuracy.high)
     
     if(show.table){
-      return(list(accuracy = accuracy, table = table)) 
+      return(list(accuracy = accuracy, table = table, prop.table = prop.table)) 
     } else{
       return(accuracy) 
     }
     
   }
 
-xgbFunc(df = winequality, samplingMethod = "none", nUndersample = NA, kOversample = NA,
-        trainPct = 0.7, max.depth = 20, eta = 0.0001, nround = 2, nthread = 2,
-        show.table = T)
+xgb.none.results <- xgbFunc(df = winequality, samplingMethod = "none", nUndersample = NA, kOversample = NA,
+                        trainPct = 0.7, max.depth = 20, eta = 0.00001, nround = 4, nthread = 2, show.table = T)
+xgb.none.results 
 
-xgbFunc(df = winequality, samplingMethod = "undersample", nUndersample = 2000, kOversample = NA,
-        trainPct = 0.7, max.depth = 20, eta = 0.0001, nround = 2, nthread = 2, show.table = T)
+xgb.undersample.results <- xgbFunc(df = winequality, samplingMethod = "undersample", nUndersample = 2000, kOversample = NA,
+                               trainPct = 0.7, max.depth = 20, eta = 0.00001, nround = 4, nthread = 2, show.table = T)
+xgb.undersample.results
 
-xgbFunc(df = winequality, samplingMethod = "oversample", nUndersample = NA, kOversample = 5,
-        trainPct = 0.7, max.depth = 20, eta = 0.0001, nround = 2, nthread = 2, show.table = T)
+xgb.oversample.results <- xgbFunc(df = winequality, samplingMethod = "oversample", nUndersample = NA, kOversample = 5,
+                              trainPct = 0.7, max.depth = 20, eta = 0.00001, nround = 4, nthread = 2, show.table = T)
+xgb.oversample.results
+
+xgb.results <- rbind(xgb.none.results$accuracy,
+                     xgb.undersample.results$accuracy,
+                     xgb.oversample.results$accuracy)
+rownames(xgb.results) <- c("None", "Undersampling", "Oversampling")
+
+xgb.results %>%
+  as.data.frame() %>%
+  rownames_to_column("SampleMethod") %>%
+  pivot_longer(cols = c("accuracy.all", "accuracy.low", "accuracy.normal", "accuracy.high"),
+               names_to = "AccuracyGroup",
+               values_to = "Accuracy")
+  ggplot(aes(x = Accuracy))
+
 
 # MCMC FUNCTION WITH PARALLEL COMPUTING
 xgbMCMC <- 
@@ -177,16 +198,21 @@ xgbMCMC <-
     
     # Obtain Accuracy
     accuracyList <- furrr::future_pmap(mcmc.grid[,-1], xgbFunc)
-    xgbAccuracy <- matrix(unlist(accuracyList, use.names = TRUE), nrow = nrow(mcmc.grid))
+    xgbAccuracy <- matrix(unlist(accuracyList, use.names = TRUE), ncol = 4, nrow = nrow(mcmc.grid), byrow = T)
+    colnames(xgbAccuracy) <- colnames(accuracyList[[1]])
     
     # Summarize Accuracy
-    results <- mcmc.grid %>%
-      mutate(xgbAccuracy = xgbAccuracy) %>%
-      group_by(samplingMethod, nUndersample, kOversample, max.depth, eta, nround, nthread) %>%
+    results <- cbind(mcmc.grid, xgbAccuracy) %>%
+      pivot_longer(cols = c("accuracy.all", "accuracy.low", "accuracy.normal", "accuracy.high"),
+                   names_to = "accuracyGroup",
+                   values_to = "accuracy") %>%
+      mutate(Method = "xgboost") %>%
+      dplyr::group_by(Method, accuracyGroup, samplingMethod, nUndersample, kOversample, max.depth, eta, nround, nthread) %>%
       summarise(B = n(),
-                mean  = mean(xgbAccuracy),
-                lower = quantile(xgbAccuracy, probs = c(0.05)),
-                upper = quantile(xgbAccuracy, probs = c(0.95)))
+                mean  = mean(accuracy),
+                lower = quantile(accuracy, probs = c(0.05)),
+                upper = quantile(accuracy, probs = c(0.95))) %>%
+      ungroup()
     
     return(results)
     
@@ -194,22 +220,38 @@ xgbMCMC <-
 
 # HYPERPARAMETER GRID SEARCH
 tic()
-xgbMCMC.results <- xgbMCMC(samplingMethod = "none", nUndersample = NA, kOversample = NA,
-                           trainPct = 0.7, B = 5, max.depth = c(10, 15, 20), eta = 1e-4, nround = 4, nthread = 2)
+xgbMCMC.none.results <- xgbMCMC(samplingMethod = "none", nUndersample = NA, kOversample = NA,
+                           trainPct = 0.7, B = 50, max.depth = 20, eta = 1e-4, nround = 4, nthread = 2)
 toc()
-xgbMCMC.results %>% arrange(-mean)
-
+# xgbMCMC.none.results
 
 tic()
-xgbMCMC.results <- xgbMCMC(samplingMethod = "undersample", nUndersample = seq(500, 2000, 500), kOversample = NA,
-                           trainPct = 0.7, B = 5, max.depth = 20, eta = 1e-4, nround = 4, nthread = 2)
+xgbMCMC.undersample.results <- xgbMCMC(samplingMethod = "undersample", nUndersample = 2000, kOversample = NA,
+                           trainPct = 0.7, B = 50, max.depth = 20, eta = 1e-4, nround = 4, nthread = 2)
 toc()
-xgbMCMC.results %>% arrange(-mean)
+# xgbMCMC.undersample.results
 
 tic()
-xgbMCMC.results <- xgbMCMC(samplingMethod = "oversample", nUndersample = NA, kOversample = 5,
-                           trainPct = 0.7, B = 5, max.depth = 20, eta = 0.00001, nround = 4, nthread = 2)
+xgbMCMC.oversample.results <- xgbMCMC(samplingMethod = "oversample", nUndersample = NA, kOversample = 5,
+                           trainPct = 0.7, B = 50, max.depth = 20, eta = 0.00001, nround = 4, nthread = 2)
 toc()
-xgbMCMC.results %>% arrange(-mean)
+# xgbMCMC.oversample.results
 
+
+xgbMCMC.results <- rbind(xgbMCMC.none.results,
+                         xgbMCMC.undersample.results,
+                         xgbMCMC.oversample.results)
+
+xgbMCMC.results %>%
+  mutate(samplingMethod = factor(samplingMethod, levels = c("none", "undersample", "oversample")),
+         accuracyGroup = factor(accuracyGroup, levels = c("accuracy.all", "accuracy.low", "accuracy.normal", "accuracy.high"))) %>%
+  ggplot(aes(x = mean, y = samplingMethod)) +
+  geom_point() +
+  geom_errorbar(aes(xmin = lower, xmax = upper), width = 0.2) +
+  facet_grid(~accuracyGroup, scales = "free") +
+  theme_bw() +
+  theme(aspect.ratio = 0.75) +
+  scale_y_discrete("") +
+  scale_x_continuous("Accuracy") +
+  ggtitle("XGBoost \nMax Depth = 20; eta = 0.00001")
 
