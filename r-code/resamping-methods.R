@@ -18,9 +18,9 @@ table(winequality $ binary_class) #0.06833923 from rare class (should be close t
 
 #Add Binary Classification variable
 winequality_rare <- filter(winequality, qualityclass %in% c('Low', 'High'))
-winequality_rare$binary_class <- 1
+winequality_rare$rare_class <- 1
 winequality_normal <- filter(winequality, qualityclass %in% c('Normal'))
-winequality_normal$binary_class <- 0
+winequality_normal$rare_class <- 0
 
 winequality <- rbind(winequality_normal,winequality_rare)
 write.csv(winequality, "winequality_binary.csv")
@@ -94,16 +94,14 @@ table(undersample_wine$binary_class)
 #Undersampling
 
 undersample <- function(train_df, nsample){
-df_wine_0_ind <- which(train_df$binary_class == 0)
-df_wine_1_ind <- which(train_df$binary_class == 1)
+df_wine_0_ind <- which(train_df$rare_class == 0)
+df_wine_1_ind <- which(train_df$rare_class == 1)
 pick_0 <- sample(df_wine_0_ind, nsample)
 undersample_wine <- train_df[c(df_wine_1_ind,pick_0),] #Final Data frame
-#table(undersample_wine$binary_class) have just to make sure it's all balancing out how I think
+return(undersample_wine)
 }
 
-#I think this is working properly.
-#Just need to enter in the data set and the number we want in our majority class
-undersample(winequality,2000)
+train_un <- undersample(winequality,444)
 
 
 #Oversampling (using smotefamily package)
@@ -168,6 +166,12 @@ winequality_normal$binary_class <- 1
 winequality_high <- filter(winequality, qualityclass %in% c('High'))
 winequality_high$binary_class <- 2 
 winequality <- rbind(winequality_normal,winequality_low, winequality_high)
+winequality_rare <- filter(winequality, qualityclass %in% c('Low', 'High'))
+winequality_rare$rare_class <- 1
+winequality_normal <- filter(winequality, qualityclass %in% c('Normal'))
+winequality_normal$rare_class <- 0
+winequality <- rbind(winequality_normal, winequality_rare)
+
 
 oversample <- function(train_df, k){
   set.seed(44)
@@ -188,3 +192,13 @@ oversample <- function(train_df, k){
 #Just need the training data set and number of nearest neighbors
 #This might take a while to run if have a bunch of different samples running
 train.data <- oversample(winequality, 5)
+
+undersample <- function(train_df, nsample){
+  df_wine_0_ind <- which(train_df$rare_class == 0)
+  df_wine_1_ind <- which(train_df$rare_class == 1)
+  pick_0 <- sample(df_wine_0_ind, nsample)
+  undersample_wine <- train_df[c(df_wine_1_ind,pick_0),] #Final Data frame
+  return(undersample_wine)
+}
+
+train_un <- undersample(winequality,444)
