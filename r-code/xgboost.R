@@ -10,30 +10,63 @@ library(smotefamily)
 # IMPORT DATA, RELEVEL FACTOR COLUMNS, 
 winequality <- read_csv("data/winequality-all.csv") %>%
   mutate(type = factor(type, levels = c("red", "white")),
+         type01 = as.numeric(ifelse(type == "white", 0, 1)),
          qualityclass = factor(qualityclass, levels = c("Low", "Normal", "High")),
-         binary_class = ifelse(qualityclass == "Normal", 0, 1))
+         under_class = ifelse(qualityclass == "Normal", 0, 1),
+         over_class = ifelse(qualityclass == "Low", 0, 
+                               ifelse(qualityclass == "Normal", 1, 2)))
 colnames(winequality) <- make.names(names(winequality), unique=TRUE)
 summary(winequality)
 
 # FUNCTION FOR UNDERSAMPLING
 undersample <- function(train_df, nsample){
-  df_wine_0_ind <- which(train_df$binary_class == 0)
-  df_wine_1_ind <- which(train_df$binary_class == 1)
+  df_wine_0_ind <- which(train_df$under_class == 0)
+  df_wine_1_ind <- which(train_df$under_class == 1)
   pick_0 <- sample(df_wine_0_ind, nsample)
   undersample_wine <- train_df[c(df_wine_1_ind,pick_0),] #Final Data frame
-  #table(undersample_wine$binary_class) have just to make sure it's all balancing out how I think
+  undersample_wine <- undersample_wine %>%
+    dplyr::select(qualityclass, type, fixed.acidity, volatile.acidity, citric.acid,
+                  residual.sugar, chlorides, free.sulfur.dioxide, total.sulfur.dioxide,
+                  density, pH, sulphates, alcohol)
+  # table(undersample_wine$under_class) # have just to make sure it's all balancing out how I think
   return(undersample_wine)
 }
 
+# FUNCTION FOR OVERSAMPLING
 oversample <- function(train_df, k){
-  require(smotefamily)
-  SMOTEData <- SMOTE(train_df[,c(4:14)], train_df[,15], K = k, dup_size = 0)
-  oversample_df <- SMOTEData$data #Final data frame
+  
+  winequality_low <- filter(winequality, qualityclass %in% c('Low'))
+  winequality_normal <- filter(winequality, qualityclass %in% c('Normal'))
+  winequality_high <- filter(winequality, qualityclass %in% c('High'))
+  
+  wine <- sort(sample(nrow(winequality_normal), nrow(winequality_normal)*0.5))
+  winequality_norm1 <- winequality_normal[wine,]
+  winequality_norm2 <- winequality_normal[-wine,]
+  
+  wine_LN <- rbind(winequality_low,winequality_norm1)
+  wine_HN <- rbind(winequality_high,winequality_norm2)
+  SMOTEData1 <- SMOTE(wine_LN[,c("fixed.acidity", "volatile.acidity", "citric.acid",
+                                 "residual.sugar", "chlorides", "free.sulfur.dioxide",
+                                 "total.sulfur.dioxide", "density", "pH", "sulphates", "alcohol",
+                                 "type01")], wine_LN[,"over_class"], K = k, dup_size = 0)
+  SMOTEData2 <- SMOTE(wine_HN[,c("fixed.acidity", "volatile.acidity", "citric.acid",
+                                 "residual.sugar", "chlorides", "free.sulfur.dioxide",
+                                 "total.sulfur.dioxide", "density", "pH", "sulphates", "alcohol",
+                                 "type01")], wine_HN[,"over_class"], K = k, dup_size = 0)
+  oversample_df1 <- SMOTEData1$data #Final data frame
+  oversample_df2 <- SMOTEData2$data #Final data frame
+  oversample_df <- rbind(oversample_df1,oversample_df2) %>%
+    mutate(type01 = round(type01)) %>%
+    mutate(type = as.factor(ifelse(type01 == 0, "white","red")),
+           qualityclass = ifelse(class == 0, "Low", 
+                                 ifelse(class == "1", "Normal","High"))) %>%
+    mutate(qualityclass = factor(qualityclass, levels = c("Low", "Normal", "High"))) %>%
+    dplyr::select(qualityclass, type, fixed.acidity, volatile.acidity, citric.acid,
+                  residual.sugar, chlorides, free.sulfur.dioxide, total.sulfur.dioxide,
+                  density, pH, sulphates, alcohol)
   #table(oversample_df$class) have just to make sure it's all balancing out how I think 
   return(oversample_df)
 }
-
-poo <- oversample(winequality, k = 5) # does not give you the quality class or wine type???
 
 # SET UP FUNCTION TO EVALUATE XGBOOST
 xgbFunc <- 
@@ -60,14 +93,20 @@ xgbFunc <-
       train.data <- oversample(train.data, kOversample) # Oversample
     }
     
-    train.data <- train.data %>% select(-binary_class, -quality)  
+    train.data <- train.data %>%     
+      dplyr::select(qualityclass, type, fixed.acidity, volatile.acidity, citric.acid,
+                    residual.sugar, chlorides, free.sulfur.dioxide, total.sulfur.dioxide,
+                    density, pH, sulphates, alcohol)
     train.datamatrix   <- sparse.model.matrix(qualityclass ~ ., data = train.data)[,-1]
     train.qualityclass <- train.data$qualityclass
     train.label        <- as.integer(train.data$qualityclass)-1 # label conversion
     xgb.train          <- list(data = train.datamatrix, label = train.label)
     
     # testing
-    test.data         <- df[-train.index,] %>% select(-binary_class, -quality)
+    test.data         <- df[-train.index,] %>%     
+      dplyr::select(qualityclass, type, fixed.acidity, volatile.acidity, citric.acid,
+                    residual.sugar, chlorides, free.sulfur.dioxide, total.sulfur.dioxide,
+                    density, pH, sulphates, alcohol)
     test.datamatrix   <- sparse.model.matrix(qualityclass ~ ., data = test.data)[,-1]
     test.qualityclass <- test.data$qualityclass
     test.label        <- as.integer(test.data$qualityclass)-1 # label conversion
@@ -99,7 +138,7 @@ xgbFunc <-
     
     # evaluated prediction
     accuracy <- mean(xgb.pred$prediction==xgb.pred$label)
-    table <- with(xgb.pred, table(prediction, label))
+    table    <- with(xgb.pred, table(prediction, label))
     
     if(show.table){
       return(list(accuracy = accuracy, table = table)) 
@@ -109,15 +148,14 @@ xgbFunc <-
     
   }
 
-xgbFunc(df = winequality, samplingMethod = "none", nUndersample = 2000, kOversample = 5,
+xgbFunc(df = winequality, samplingMethod = "none", nUndersample = NA, kOversample = NA,
         trainPct = 0.7, max.depth = 20, eta = 0.0001, nround = 2, nthread = 2,
         show.table = T)
 
-xgbFunc(df = winequality, samplingMethod = "undersample", nUndersample = 2000, kOversample = 5,
+xgbFunc(df = winequality, samplingMethod = "undersample", nUndersample = 2000, kOversample = NA,
         trainPct = 0.7, max.depth = 20, eta = 0.0001, nround = 2, nthread = 2, show.table = T)
 
-# Does not work right now...
-xgbFunc(df = winequality, samplingMethod = "oversample", nUndersample = 2000, kOversample = 5,
+xgbFunc(df = winequality, samplingMethod = "oversample", nUndersample = NA, kOversample = 5,
         trainPct = 0.7, max.depth = 20, eta = 0.0001, nround = 2, nthread = 2, show.table = T)
 
 # MCMC FUNCTION WITH PARALLEL COMPUTING
@@ -169,8 +207,8 @@ toc()
 xgbMCMC.results %>% arrange(-mean)
 
 tic()
-xgbMCMC.results <- xgbMCMC(samplingMethod = "overample", nUndersample = NA, kOversample = seq(4,6,1),
-                           trainPct = 0.7, B = 5, max.depth = 20, eta = 1e-4, nround = 4, nthread = 2)
+xgbMCMC.results <- xgbMCMC(samplingMethod = "oversample", nUndersample = NA, kOversample = 5,
+                           trainPct = 0.7, B = 5, max.depth = 20, eta = 0.00001, nround = 4, nthread = 2)
 toc()
 xgbMCMC.results %>% arrange(-mean)
 
