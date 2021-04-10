@@ -109,8 +109,18 @@ undersample(winequality,2000)
 #Oversampling (using smotefamily package)
 
 oversample <- function(train_df, k){
-  SMOTEData <- SMOTE(train_df[,c(4:14)], train_df[,15], K = k, dup_size = 0)
-  oversample_df <- SMOTEData$data #Final data frame
+
+  set.seed(44)
+  wine<- sort(sample(nrow(winequality_normal), nrow(winequality_normal)*0.5))
+  winequality_norm1 <- winequality_normal[wine,]
+  winequality_norm2 <- winequality_normal[-wine,]
+  wine_LN <- rbind(winequality_low,winequality_norm1)
+  wine_HN <- rbind(winequality_high,winequality_norm2)
+  SMOTEData1 <- SMOTE(wine_LN[,c(3:14)], wine_LN[,15], K = k, dup_size = 0)
+  SMOTEData2 <- SMOTE(wine_HN[,c(3:14)], wine_HN[,15], K = k, dup_size = 0)
+  oversample_df1 <- SMOTEData1$data #Final data frame
+  oversample_df2 <- SMOTEData2$data #Final data frame
+  oversample_df <- rbind(oversample_df1,oversample_df2)
   #table(oversample_df$class) have just to make sure it's all balancing out how I think 
   return(oversample_df)
 }
@@ -126,7 +136,7 @@ train.data <- oversample(winequality, 5)
 winequality_low <- filter(winequality, qualityclass == "Low")
 winequality_norm <- filter(winequality, qualityclass == "Normal")
 winequality_high <- filter(winequality, qualityclass == "High")
-winequality_high$binary_class <- 2
+
 
 set.seed(44)
 
@@ -143,3 +153,38 @@ train.data_HN <- oversample(wine_HN, 5)
 train <- rbind(train.data_HN,train.data_LH)
 
 table(train$class)
+
+
+
+###########NEED to Run this first - function references some of this stuff#########
+
+winequality[winequality$type == "red",]$type = 1
+winequality[winequality$type == "white",]$type = 0
+winequality$type <- as.numeric(winequality$type)
+winequality_low <- filter(winequality, qualityclass %in% c('Low'))
+winequality_low$binary_class <- 0
+winequality_normal <- filter(winequality, qualityclass %in% c('Normal'))
+winequality_normal$binary_class <- 1
+winequality_high <- filter(winequality, qualityclass %in% c('High'))
+winequality_high$binary_class <- 2 
+winequality <- rbind(winequality_normal,winequality_low, winequality_high)
+
+oversample <- function(train_df, k){
+  set.seed(44)
+  wine<- sort(sample(nrow(winequality_normal), nrow(winequality_normal)*0.5))
+  winequality_norm1 <- winequality_normal[wine,]
+  winequality_norm2 <- winequality_normal[-wine,]
+  wine_LN <- rbind(winequality_low,winequality_norm1)
+  wine_HN <- rbind(winequality_high,winequality_norm2)
+  SMOTEData1 <- SMOTE(wine_LN[,c(3:14)], wine_LN[,15], K = k, dup_size = 0)
+  SMOTEData2 <- SMOTE(wine_HN[,c(3:14)], wine_HN[,15], K = k, dup_size = 0)
+  oversample_df1 <- SMOTEData1$data #Final data frame
+  oversample_df2 <- SMOTEData2$data #Final data frame
+  oversample_df <- rbind(oversample_df1,oversample_df2)
+  #table(oversample_df$class) have just to make sure it's all balancing out how I think 
+  return(oversample_df)
+}
+
+#Just need the training data set and number of nearest neighbors
+#This might take a while to run if have a bunch of different samples running
+train.data <- oversample(winequality, 5)
