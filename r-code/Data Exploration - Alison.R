@@ -33,7 +33,7 @@ ggcorrplot(corr, hc.order = TRUE,
 
 
 #Boxplot
-winequality_bp <- winequality[,-c(1,15)]
+data_long <- melt(winequality)
 ggplot(data_long, aes(x = qualityclass, y = value)) +            
   geom_boxplot() +
   facet_wrap(~variable, scales = "free")
