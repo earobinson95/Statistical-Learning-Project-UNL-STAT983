@@ -50,7 +50,9 @@ table(predTrain, winequalitytest$qualityclass)
 importance(model1_tuned)
 varImpPlot(model1_tuned)
 
-#4.11.2021
+
+
+#4.11.2021 New Approach
 
 # IMPORT DATA, RELEVEL FACTOR COLUMNS, 
 winequality <- read_csv("data/winequality-all.csv") %>%
@@ -114,6 +116,7 @@ oversample <- function(train_df, k){
 }
 
 # SET UP FUNCTION TO EVALUATE RANDOM FOREST
+#Need to add mtry variability to functions for evaluation
 rfFunc <- 
   function(df = winequality, samplingMethod = "none", nUndersample = 2000, kOversample = 5,
            trainPct = 0.7){
@@ -154,17 +157,29 @@ rfFunc <-
 
     # Fit that Random Forest!
     rf.fit <- randomForest(qualityclass ~ ., 
-                           data=rf.train$data,
+                           data=rf.train$data,#winequalitytrain,#
                            method="class", 
                            ntree=500,
                            importance=TRUE
                            )
     rf.fit
-    # Get that Prediction!
-    rf.pred = predict(rf.fit, rf.test$data, reshape = T) %>% as.data.frame()
     
-    # evaluated prediction
-    accuracy.all  <- mean(rf.pred$prediction==rf.pred$label)
+    # Get that Prediction!
+    rf.pred = predict(rf.fit, #winequalitytest,
+                      rf.test$data, 
+                      reshape = T) %>% as.data.frame()
+    
+    ### THIS IS SPECIFIC TO XGBOOST DON"T NEED - I think I need something from below, issue with dimensionality of pred SJA,
+    colnames(rf) = levels(train.qualityclass)
+    rf.pred$prediction = apply(rf.pred, 1, function(x) colnames(rf.pred)[which.max(x)])
+    rf.pred$label = levels(train.qualityclass)[test.label + 1]
+    rf.pred <- rf.pred %>%
+      mutate(prediction = factor(prediction, levels = c("Low", "Normal", "High")),
+             label = factor(label, levels = c("Low", "Normal", "High")))
+    #####
+    
+    # Evaluate Prediction
+    accuracy.all  <- mean(rf.pred$prediction==rf.pred$label) #this is not working SJA
     table    <- with(rf.pred, table(label, prediction))
     prop.table <- table/rowSums(table)
     accuracy.low    <- prop.table[1,1]
@@ -183,12 +198,14 @@ rfFunc <-
 rf.none.results <- rfFunc(df = winequality, samplingMethod = "none", nUndersample = NA, kOversample = NA, trainPct = 0.7)
 rf.none.results 
 
-rf.undersample.results <- rfFunc(df = winequality, samplingMethod = "undersample", nUndersample = 2000, kOversample = NA,
-                                   trainPct = 0.7, max.depth = 20, eta = 0.00001, nround = 4, nthread = 2, show.table = T)
+
+
+#not reviewed below SJA
+
+rf.undersample.results <- rfFunc(df = winequality, samplingMethod = "undersample", nUndersample = 2000, kOversample = NA, trainPct = 0.7)
 rf.undersample.results
 
-rf.oversample.results <- rfFunc(df = winequality, samplingMethod = "oversample", nUndersample = NA, kOversample = 5,
-                                  trainPct = 0.7, max.depth = 20, eta = 0.00001, nround = 4, nthread = 2, show.table = T)
+rf.oversample.results <- rfFunc(df = winequality, samplingMethod = "oversample", nUndersample = NA, kOversample = 5, trainPct = 0.7)
 rf.oversample.results
 
 rf.results <- rbind(rf.none.results$accuracy,
@@ -204,11 +221,9 @@ rf.results %>%
                values_to = "Accuracy")
 ggplot(aes(x = Accuracy))
 
-
 # MCMC FUNCTION WITH PARALLEL COMPUTING
 rfMCMC <- 
-  function(samplingMethod = "none", nUndersample = 2000, kOversample = 5,
-           B = 5, trainPct = 0.7, max.depth, eta, nround = 2, nthread = 2){
+  function(samplingMethod = "none", nUndersample = 2000, kOversample = 5, B = 5, trainPct = 0.7){
     require(furrr)
     
     # Create Parameter Grid
@@ -216,11 +231,7 @@ rfMCMC <-
                              samplingMethod = samplingMethod,
                              nUndersample = nUndersample,
                              kOversample = kOversample,
-                             trainPct = trainPct,
-                             max.depth = max.depth, 
-                             eta = eta,
-                             nround = nround, 
-                             nthread = nthread)
+                             trainPct = trainPct)
     
     # Obtain Accuracy
     accuracyList <- furrr::future_pmap(mcmc.grid[,-1], rfFunc)
@@ -232,7 +243,7 @@ rfMCMC <-
       pivot_longer(cols = c("accuracy.all", "accuracy.low", "accuracy.normal", "accuracy.high"),
                    names_to = "accuracyGroup",
                    values_to = "accuracy") %>%
-      mutate(Method = "rfoost") %>%
+      mutate(Method = "randomForest") %>%
       dplyr::group_by(Method, accuracyGroup, samplingMethod, nUndersample, kOversample, max.depth, eta, nround, nthread) %>%
       summarise(B = n(),
                 mean  = mean(accuracy),
@@ -244,22 +255,23 @@ rfMCMC <-
     
   }
 
+
 # HYPERPARAMETER GRID SEARCH
 tic()
 rfMCMC.none.results <- rfMCMC(samplingMethod = "none", nUndersample = NA, kOversample = NA,
-                                trainPct = 0.7, B = 50, max.depth = 20, eta = 1e-4, nround = 4, nthread = 2)
+                                trainPct = 0.7, B = 50)
 toc()
 # rfMCMC.none.results
 
 tic()
 rfMCMC.undersample.results <- rfMCMC(samplingMethod = "undersample", nUndersample = 2000, kOversample = NA,
-                                       trainPct = 0.7, B = 50, max.depth = 20, eta = 1e-4, nround = 4, nthread = 2)
+                                       trainPct = 0.7, B = 50)
 toc()
 # rfMCMC.undersample.results
 
 tic()
 rfMCMC.oversample.results <- rfMCMC(samplingMethod = "oversample", nUndersample = NA, kOversample = 5,
-                                      trainPct = 0.7, B = 50, max.depth = 20, eta = 0.00001, nround = 4, nthread = 2)
+                                      trainPct = 0.7, B = 50)
 toc()
 # rfMCMC.oversample.results
 
