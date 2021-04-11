@@ -37,6 +37,8 @@ knitr::opts_chunk$set(echo = F,
 library(readr)
 library(tidyverse)
 library(knitr)
+library(ggcorrplot)
+library(reshape2)
 ```
 
 <!-- \er{Emily} -->
@@ -148,6 +150,31 @@ winequality %>%
   scale_x_discrete("Quality Class") +
   scale_y_continuous("Proportion", limits = c(0, 1.1), breaks = seq(0, 1, 0.2), labels = scales::percent)
 ```
+
+
+```{r correlation, fig.cap= "Correlation Plot"}
+corr <- round(cor(winequality[c(1, 4:14)]), 3)
+p.mat <- cor_pmat(winequality[c(1, 4:14)])
+ggcorrplot(corr, hc.order = TRUE, 
+           type = "lower", 
+           outline.col = "white",
+           colors = c("#6D9EC1", "white", "#E46726"),
+           p.mat = p.mat,
+           lab = TRUE,
+           insig = "blank")
+
+```
+
+
+```{r boxplots, fig.cap="Distribution of the Predictor Variables"}
+data_long <- melt(winequality)
+ggplot(data_long, aes(x = qualityclass, y = value)) +            
+  geom_boxplot() +
+  facet_wrap(~variable, scales = "free")
+
+```
+
+
 
 In this paper we are going to be looking at two main research questions. The first one focuses on developing a model that would work well to classify wines into three categories, which are: poor quality, normal quality and high quality. As stated in the problem description, it is desirable to classify wines using physicochemical properties since this does not involve human bias that would come into play with human tasters. We plan on using three different classification techniques. First, we will utilize random forests given prior investigation of the white wine data showed this technique seemed to work well; we would like to test this method using both white and red wine. Our second method is XGBoost, which is a gradient boosting framework that can be done in R. Previous papers on this data set have used different versions of gradient boosting like adaptive boost. Our final proposed method is KNN, as this seems to be a method that has not yet been used in any sort of wine classification.
 
