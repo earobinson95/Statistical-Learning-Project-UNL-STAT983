@@ -139,19 +139,29 @@ rfFunc <-
       dplyr::select(qualityclass, type, fixed.acidity, volatile.acidity, citric.acid,
                     residual.sugar, chlorides, free.sulfur.dioxide, total.sulfur.dioxide,
                     density, pH, sulphates, alcohol)
+    train.qualityclass <- train.data$qualityclass #I don't think I need this SJA
+    train.label        <- as.integer(train.data$qualityclass)-1 # label conversion
+    rf.train           <- list(data = train.data, label = train.label)
 
     # testing
-    
-    test.data         <- df[-train.index,] %>%     
+    test.data  <- df[-train.index,] %>%     
       dplyr::select(qualityclass, type, fixed.acidity, volatile.acidity, citric.acid,
                     residual.sugar, chlorides, free.sulfur.dioxide, total.sulfur.dioxide,
                     density, pH, sulphates, alcohol)
+    test.qualityclass <- test.data$qualityclass
+    test.label        <- as.integer(test.data$qualityclass)-1 # label conversion
+    rf.test           <- list(data = test.data, label = test.label)
 
     # Fit that Random Forest!
-    rf.fit <- randomForest(quality ~ ., method="class", data  = train$data, label = train$label)
-    
-    # predict
-    rf.pred = predict(rf.fit, test$data, reshape = T) %>% as.data.frame()
+    rf.fit <- randomForest(qualityclass ~ ., 
+                           data=rf.train$data,
+                           method="class", 
+                           ntree=500,
+                           importance=TRUE
+                           )
+    rf.fit
+    # Get that Prediction!
+    rf.pred = predict(rf.fit, rf.test$data, reshape = T) %>% as.data.frame()
     
     # evaluated prediction
     accuracy.all  <- mean(rf.pred$prediction==rf.pred$label)
@@ -170,8 +180,7 @@ rfFunc <-
     
   }
 
-rf.none.results <- rfFunc(df = winequality, samplingMethod = "none", nUndersample = NA, kOversample = NA,
-                            trainPct = 0.7, max.depth = 20, eta = 0.00001, nround = 4, nthread = 2, show.table = T)
+rf.none.results <- rfFunc(df = winequality, samplingMethod = "none", nUndersample = NA, kOversample = NA, trainPct = 0.7)
 rf.none.results 
 
 rf.undersample.results <- rfFunc(df = winequality, samplingMethod = "undersample", nUndersample = 2000, kOversample = NA,
