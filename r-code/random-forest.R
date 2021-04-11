@@ -119,10 +119,10 @@ oversample <- function(train_df, k){
 #Need to add mtry variability to functions for evaluation
 rfFunc <- 
   function(df = winequality, samplingMethod = "none", nUndersample = 2000, kOversample = 5,
-           trainPct = 0.7){
+           trainPct = 0.7, importance = F, mtry = 4, ntree = 500, show.table = F){
     
     require(randomForest)
-
+  
     # set up training/testing sets
     n <- nrow(df)
     train.index <- sample(seq(1,n), floor(n*trainPct), replace = F)
@@ -142,45 +142,45 @@ rfFunc <-
       dplyr::select(qualityclass, type, fixed.acidity, volatile.acidity, citric.acid,
                     residual.sugar, chlorides, free.sulfur.dioxide, total.sulfur.dioxide,
                     density, pH, sulphates, alcohol)
-    train.qualityclass <- train.data$qualityclass #I don't think I need this SJA
-    train.label        <- as.integer(train.data$qualityclass)-1 # label conversion
-    rf.train           <- list(data = train.data, label = train.label)
+    # train.qualityclass <- train.data$qualityclass #I don't think I need this SJA
+    # train.label        <- as.integer(train.data$qualityclass)-1 # label conversion
+    # rf.train           <- list(data = train.data, label = train.label)
 
     # testing
     test.data  <- df[-train.index,] %>%     
       dplyr::select(qualityclass, type, fixed.acidity, volatile.acidity, citric.acid,
                     residual.sugar, chlorides, free.sulfur.dioxide, total.sulfur.dioxide,
                     density, pH, sulphates, alcohol)
-    test.qualityclass <- test.data$qualityclass
-    test.label        <- as.integer(test.data$qualityclass)-1 # label conversion
-    rf.test           <- list(data = test.data, label = test.label)
+    # test.qualityclass <- test.data$qualityclass
+    # test.label        <- as.integer(test.data$qualityclass)-1 # label conversion
+    # rf.test           <- list(data = test.data, label = test.label)
 
     # Fit that Random Forest!
     rf.fit <- randomForest(qualityclass ~ ., 
-                           data=rf.train$data,#winequalitytrain,#
+                           data=train.data,
                            method="class", 
-                           ntree=500,
-                           importance=TRUE
+                           ntree=ntree,
+                           mtry = mtry,
+                           importance=importance
                            )
-    rf.fit
+    # rf.fit
     
-    # Get that Prediction!
-    rf.pred = predict(rf.fit, #winequalitytest,
-                      rf.test$data, 
-                      reshape = T) %>% as.data.frame()
+    # Get that Prediction! I don't think you need to reshape, you want a vector of predicted values
+    rf.pred = predict(rf.fit, newdata = test.data) 
+    # length(rf.pred) # Should be nrow(test.data) x 1
     
     ### THIS IS SPECIFIC TO XGBOOST DON"T NEED - I think I need something from below, issue with dimensionality of pred SJA,
-    colnames(rf) = levels(train.qualityclass)
-    rf.pred$prediction = apply(rf.pred, 1, function(x) colnames(rf.pred)[which.max(x)])
-    rf.pred$label = levels(train.qualityclass)[test.label + 1]
-    rf.pred <- rf.pred %>%
-      mutate(prediction = factor(prediction, levels = c("Low", "Normal", "High")),
-             label = factor(label, levels = c("Low", "Normal", "High")))
+    # colnames(rf) = levels(train.qualityclass)
+    # rf.pred$prediction = apply(rf.pred, 1, function(x) colnames(rf.pred)[which.max(x)])
+    # rf.pred$label = levels(train.qualityclass)[test.label + 1]
+    # rf.pred <- rf.pred %>%
+    #   mutate(prediction = factor(prediction, levels = c("Low", "Normal", "High")),
+    #          label = factor(label, levels = c("Low", "Normal", "High")))
     #####
     
     # Evaluate Prediction
-    accuracy.all  <- mean(rf.pred$prediction==rf.pred$label) #this is not working SJA
-    table    <- with(rf.pred, table(label, prediction))
+    accuracy.all  <- mean(rf.pred==test.data$qualityclass) #this is not working SJA
+    table    <- table(test.data$qualityclass, rf.pred)
     prop.table <- table/rowSums(table)
     accuracy.low    <- prop.table[1,1]
     accuracy.normal <- prop.table[2,2]
@@ -195,17 +195,15 @@ rfFunc <-
     
   }
 
-rf.none.results <- rfFunc(df = winequality, samplingMethod = "none", nUndersample = NA, kOversample = NA, trainPct = 0.7)
+rf.none.results <- rfFunc(df = winequality, samplingMethod = "none", nUndersample = NA, kOversample = NA, trainPct = 0.7, ntree = 500, mtry = 4, show.table = T)
 rf.none.results 
-
-
 
 #not reviewed below SJA
 
-rf.undersample.results <- rfFunc(df = winequality, samplingMethod = "undersample", nUndersample = 2000, kOversample = NA, trainPct = 0.7)
+rf.undersample.results <- rfFunc(df = winequality, samplingMethod = "undersample", nUndersample = 2000, kOversample = NA, trainPct = 0.7, ntree = 500, mtry = 4, show.table = T)
 rf.undersample.results
 
-rf.oversample.results <- rfFunc(df = winequality, samplingMethod = "oversample", nUndersample = NA, kOversample = 5, trainPct = 0.7)
+rf.oversample.results <- rfFunc(df = winequality, samplingMethod = "oversample", nUndersample = NA, kOversample = 5, trainPct = 0.7, ntree = 500, mtry = 4, show.table = T)
 rf.oversample.results
 
 rf.results <- rbind(rf.none.results$accuracy,
@@ -218,12 +216,20 @@ rf.results %>%
   rownames_to_column("SampleMethod") %>%
   pivot_longer(cols = c("accuracy.all", "accuracy.low", "accuracy.normal", "accuracy.high"),
                names_to = "AccuracyGroup",
-               values_to = "Accuracy")
-ggplot(aes(x = Accuracy))
+               values_to = "Accuracy") %>%
+  mutate(SampleMethod = factor(SampleMethod, levels = c("Oversampling", "Undersampling", "None")),
+         AccruacyGroup = factor(AccuracyGroup, levels = c("accuracy.all", "accuracy.low", "accuracy.normal", "accuracy.high"))) %>%
+ggplot(aes(x = Accuracy, y = SampleMethod)) +
+  geom_point() +
+  facet_wrap(~ AccuracyGroup, ncol = 1) +
+  theme_bw() +
+  theme(aspect.ratio = 0.2) +
+  scale_y_discrete("") +
+  scale_x_continuous("Classification Rate", limits = c(0,1), breaks = seq(0,1,0.2), labels = scales::percent)
 
 # MCMC FUNCTION WITH PARALLEL COMPUTING
 rfMCMC <- 
-  function(samplingMethod = "none", nUndersample = 2000, kOversample = 5, B = 5, trainPct = 0.7){
+  function(B = 5, samplingMethod = "none", nUndersample = 2000, kOversample = 5, trainPct = 0.7, ntree = 500, mtry = 4){
     require(furrr)
     
     # Create Parameter Grid
@@ -231,7 +237,9 @@ rfMCMC <-
                              samplingMethod = samplingMethod,
                              nUndersample = nUndersample,
                              kOversample = kOversample,
-                             trainPct = trainPct)
+                             trainPct = trainPct,
+                             ntree = ntree,
+                             mtry = mtry)
     
     # Obtain Accuracy
     accuracyList <- furrr::future_pmap(mcmc.grid[,-1], rfFunc)
@@ -243,8 +251,8 @@ rfMCMC <-
       pivot_longer(cols = c("accuracy.all", "accuracy.low", "accuracy.normal", "accuracy.high"),
                    names_to = "accuracyGroup",
                    values_to = "accuracy") %>%
-      mutate(Method = "randomForest") %>%
-      dplyr::group_by(Method, accuracyGroup, samplingMethod, nUndersample, kOversample, max.depth, eta, nround, nthread) %>%
+      mutate(Method = "Random Forest") %>%
+      dplyr::group_by(Method, accuracyGroup, samplingMethod, nUndersample, kOversample, ntree, mtry) %>%
       summarise(B = n(),
                 mean  = mean(accuracy),
                 lower = quantile(accuracy, probs = c(0.05)),
@@ -258,27 +266,27 @@ rfMCMC <-
 
 # HYPERPARAMETER GRID SEARCH
 tic()
-rfMCMC.none.results <- rfMCMC(samplingMethod = "none", nUndersample = NA, kOversample = NA,
-                                trainPct = 0.7, B = 50)
+rfMCMC.none.results <- rfMCMC(B = 50, samplingMethod = "none", nUndersample = NA, kOversample = NA,
+                                trainPct = 0.7, ntree = 500, mtry = 4)
 toc()
 # rfMCMC.none.results
 
 tic()
-rfMCMC.undersample.results <- rfMCMC(samplingMethod = "undersample", nUndersample = 2000, kOversample = NA,
-                                       trainPct = 0.7, B = 50)
+rfMCMC.undersample.results <- rfMCMC(B = 50, samplingMethod = "undersample", nUndersample = 2000, kOversample = NA,
+                                      trainPct = 0.7, ntree = 500, mtry = 4)
 toc()
 # rfMCMC.undersample.results
 
 tic()
-rfMCMC.oversample.results <- rfMCMC(samplingMethod = "oversample", nUndersample = NA, kOversample = 5,
-                                      trainPct = 0.7, B = 50)
+rfMCMC.oversample.results <- rfMCMC(B = 50, samplingMethod = "oversample", nUndersample = NA, kOversample = 5,
+                                    trainPct = 0.7, ntree = 500, mtry = 4)
 toc()
 # rfMCMC.oversample.results
 
 
 rfMCMC.results <- rbind(rfMCMC.none.results,
-                         rfMCMC.undersample.results,
-                         rfMCMC.oversample.results)
+                        rfMCMC.undersample.results,
+                        rfMCMC.oversample.results)
 
 rfMCMC.results %>%
   mutate(samplingMethod = factor(samplingMethod, levels = c("none", "undersample", "oversample")),
@@ -286,9 +294,9 @@ rfMCMC.results %>%
   ggplot(aes(x = mean, y = samplingMethod)) +
   geom_point() +
   geom_errorbar(aes(xmin = lower, xmax = upper), width = 0.2) +
-  facet_grid(~accuracyGroup) +
+  facet_wrap(~accuracyGroup, ncol = 1) +
   theme_bw() +
-  theme(aspect.ratio = 0.75) +
+  theme(aspect.ratio = 0.2) +
   scale_y_discrete("") +
-  scale_x_continuous("Accuracy") +
-  ggtitle("rfoost \nMax Depth = 20; eta = 0.00001")
+  scale_x_continuous("Accuracy", limits = c(0,1), breaks = seq(0,1,0.2), labels = scales::percent) +
+  ggtitle("Random Forest \nntree = 500; mtry = 4")
