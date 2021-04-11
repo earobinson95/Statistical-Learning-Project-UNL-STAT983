@@ -195,6 +195,30 @@ SMOTE, which stands for Synthetic Minority Over-Sampling Technique, is an oversa
 
 # Results
 
+```{r accuracy-results, fig.align = 'left', fig.width = 9}
+
+# read in data
+MCMC.results <- read_csv("MCMC.results.csv")
+
+# new facet labels
+accuracyGroup.labs <- c("Overall", "Low Quality", "Normal Quality", "High Quality")
+names(accuracyGroup.labs) <- c("accuracy.all", "accuracy.low", "accuracy.normal", "accuracy.high")
+
+# plot accuracy
+MCMC.results %>%
+  mutate(samplingMethod = factor(samplingMethod, levels = c("none", "undersample", "oversample")),
+         accuracyGroup = factor(accuracyGroup, levels = c("accuracy.all", "accuracy.low", "accuracy.normal", "accuracy.high"))) %>%
+  ggplot(aes(x = mean, y = samplingMethod, group = Method, color = Method)) +
+  geom_point(size = 1, position = position_dodge(width = 0.5)) +
+  geom_errorbar(aes(xmin = lower, xmax = upper), position = position_dodge(width = 0.5), width = 0.4) +
+  facet_wrap(~accuracyGroup, ncol = 1, labeller = labeller(accuracyGroup = accuracyGroup.labs)) +
+  theme_bw() +
+  theme(aspect.ratio = 0.2) +
+  scale_y_discrete("Resampling Method") +
+  scale_x_continuous("Accuracy", limits = c(0,1), breaks = seq(0,1,0.2), labels = scales::percent) +
+  scale_color_brewer("", palette = "Paired")
+```
+
 # Conclusion
 
 ```{r, include = F}
