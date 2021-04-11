@@ -93,20 +93,29 @@ xgbFunc <-
       train.data <- oversample(train.data, kOversample) # Oversample
     }
     
-    train.data <- train.data %>%     
+    
+    ### SARAH NEEDS THIS
+    train.data <- train.data %>%  
       dplyr::select(qualityclass, type, fixed.acidity, volatile.acidity, citric.acid,
                     residual.sugar, chlorides, free.sulfur.dioxide, total.sulfur.dioxide,
                     density, pH, sulphates, alcohol)
+    ####
+    
+    
     train.datamatrix   <- sparse.model.matrix(qualityclass ~ ., data = train.data)[,-1]
     train.qualityclass <- train.data$qualityclass
     train.label        <- as.integer(train.data$qualityclass)-1 # label conversion
     xgb.train          <- list(data = train.datamatrix, label = train.label)
     
     # testing
+    
+    ### SARAH NEEDS THIS
     test.data         <- df[-train.index,] %>%     
       dplyr::select(qualityclass, type, fixed.acidity, volatile.acidity, citric.acid,
                     residual.sugar, chlorides, free.sulfur.dioxide, total.sulfur.dioxide,
                     density, pH, sulphates, alcohol)
+    ### 
+    
     test.datamatrix   <- sparse.model.matrix(qualityclass ~ ., data = test.data)[,-1]
     test.qualityclass <- test.data$qualityclass
     test.label        <- as.integer(test.data$qualityclass)-1 # label conversion
@@ -114,6 +123,8 @@ xgbFunc <-
     
 
     # fit xgboost model
+    
+    ### REPLACE THIS WITH RF CODE
     xgb.fit <- xgboost(data  = xgb.train$data,
                        label = xgb.train$label,
                        booster ="gbtree",
@@ -129,12 +140,15 @@ xgbFunc <-
     
     # predict
     xgb.pred = predict(xgb.fit, xgb.test$data, reshape = T) %>% as.data.frame()
+    
+    ### THIS IS SPECIFIC TO XGBOOST DON"T NEED
     colnames(xgb.pred) = levels(train.qualityclass)
     xgb.pred$prediction = apply(xgb.pred, 1, function(x) colnames(xgb.pred)[which.max(x)])
     xgb.pred$label = levels(train.qualityclass)[test.label + 1]
     xgb.pred <- xgb.pred %>%
       mutate(prediction = factor(prediction, levels = c("Low", "Normal", "High")),
              label = factor(label, levels = c("Low", "Normal", "High")))
+    #####
     
     # evaluated prediction
     accuracy.all  <- mean(xgb.pred$prediction==xgb.pred$label)
@@ -248,7 +262,7 @@ xgbMCMC.results %>%
   ggplot(aes(x = mean, y = samplingMethod)) +
   geom_point() +
   geom_errorbar(aes(xmin = lower, xmax = upper), width = 0.2) +
-  facet_grid(~accuracyGroup, scales = "free") +
+  facet_grid(~accuracyGroup) +
   theme_bw() +
   theme(aspect.ratio = 0.75) +
   scale_y_discrete("") +
