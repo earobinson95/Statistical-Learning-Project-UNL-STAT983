@@ -46,7 +46,7 @@ library(reshape2)
 <!-- \sa{Sarah} -->
 
 # Introduction
-Successful marking campaigns and productive selling strategies are directly linked to communication about key indicators of quality; hence, objective measurements of quality are essential. 
+Successful marketing campaigns and productive selling strategies are directly linked to communication about key indicators of quality; hence, objective measurements of quality are essential. 
 Within the wine industry, there are two types of quality assessment: physiochemical and sensory tests. 
 Sensory tests require a human expert to assess the quality of wine based on visual, taste, and smell \citep{hu2016classification}. 
 Hiring human experts to conduct sensory tests can take time and be expensive \citep{gupta2018selection}. 
@@ -57,7 +57,7 @@ Recently, research in the food industry has utilized statistical learning techni
 These techniques also have the advantage of identifying important the phsiochemical characteristics that have an impact on the quality of wine as determined by a sensory test. 
 In this report, we will investigate the accuracy of three classification techniques, and also address the challenges of classification with imbalanced data.
 
-We will be working with the "Wine Quality Data Set" found on the UCI Data Repository at https://archive.ics.uci.edu/ml/datasets/Wine+Quality. \citep{UCIdataset, cortez2009using}. 
+In this paper, we apply classification and resampling techniques to the "Wine Quality Data Set" found on the UCI Data Repository at https://archive.ics.uci.edu/ml/datasets/Wine+Quality. \citep{UCIdataset, cortez2009using}. 
 This data set consists of white (4898 samples) and red (1599 samples) Portuguese "Vinho Verde" wine samples. 
 Each wine sample was processed to obtain measures for 11 physiochemical variables: fixed acidity, volatile acidity, citric acid, residual sugar, chlorides, free sulfur dioxide, total sulfur dioxide, density, pH, sulphates, and alcohol. 
 A sensory test conducted by at least three sommeliers was used to determine a quality rating on an 11 point scale from 0 - very bad to 10 - very excellent.
@@ -67,71 +67,6 @@ Basic descriptives are provided below; the Mann-Whitney and chi-square tests wer
 ```{r data}
 winequality <- read.csv("../data/winequality-all.csv")
 ```
-
-```{r descriptives}
-# https://cran.r-project.org/web/packages/Gmisc/vignettes/Descriptives.html;
-# For labeling we use the label() function from the Hmisc package
-# install.packages("Hmisc")
-# install.packages("Gmisc")
-# library(Hmisc)
-# library(Gmisc)
-# data(winequality)
-# 
-# # Style all the table output using htmlTable's theme handler
-# htmlTable::setHtmlTableTheme(css.rgroup = "")
-# 
-# winequality$qualityclass <- factor(winequality$qualityclass, levels=c("Low","Normal","High"),
-#                             labels=c("Low (N=246)","Normal (N=6,053)","High (N=198)")) 
-# winequality$type <- factor(winequality$type, levels=c("red","white"),
-#                     labels=c("Red Wine","White Wine"))
-# 
-# label(winequality$qualityclass)         <- "Quality"
-# label(winequality$type)                 <- "Type"
-# label(winequality$fixed.acidity)        <- "Fixed Acidity"
-# units(winequality$fixed.acidity)        <- "(g tartaric acid/dm^3), median (IQR)"
-# label(winequality$volatile.acidity)     <- "Volatile Acidity"
-# units(winequality$volatile.acidity)     <- "(g acetic acid/dm^3), median (IQR)"
-# label(winequality$citric.acid)          <- "Citric Acid"
-# units(winequality$citric.acid)          <- "(g/dm^3), median (IQR)"
-# label(winequality$residual.sugar)       <- "Residual Sugar"
-# units(winequality$residual.sugar)       <- "(g/dm^3), median (IQR)"
-# label(winequality$chlorides)            <- "Chlorides"
-# units(winequality$chlorides)            <- "(g sodium chloride/dm^3), median (IQR)"
-# label(winequality$free.sulfur.dioxide)  <- "Free Sulfur Dioxide"
-# units(winequality$free.sulfur.dioxide)  <- "(mg/dm^3), median (IQR)"
-# label(winequality$total.sulfur.dioxide) <- "Total Sulfur Dioxide"
-# units(winequality$total.sulfur.dioxide) <- "(mg/dm^3), median (IQR)"
-# label(winequality$density)              <- "Density"
-# units(winequality$density)              <- "(g/cm^3), median (IQR)"
-# label(winequality$pH)                   <- "pH"
-# units(winequality$pH)                   <- "median (IQR)"
-# label(winequality$sulphates)            <- "Sulphates"
-# units(winequality$sulphates)            <- "(g potassium sulphate/dm^3), median (IQR)"
-# label(winequality$alcohol)              <- "Alcohol"
-# units(winequality$alcohol)              <- "(volume %), median (IQR)"
-# 
-# getTable1Stats <- function(x, digits = 0, ...){
-#   getDescriptionStatsBy(x = x, 
-#                         by = winequality$qualityclass,
-#                         digits = digits,
-#                         continuous_fn = describeMedian,
-#                         header_count = TRUE,
-#                         ...)
-# }
-# 
-# t1 <- list()
-# t1[["Quality"]] <- getTable1Stats(winequality$qualityclass)
-# t1[["Fixed Acidity"]] <- getTable1Stats(winequality$fixed.acidity)
-# t1[["Volatile Acidity"]] <- getTable1Stats(winequality$volatile.acidity)
-# 
-# mergeDesc(t1,
-#           htmlTable_args = list(caption  = "Basic Descriptive Statistics from the Wine Quality Dataset"))
-# 
-# t1
-
-```
-
-The quality categorization poses a challenge of working with imbalanced classes as there are many more normal wines than low or high quality wines (Figure \ref{fig:class-distribution}).
 
 ```{r class-distribution, fig.height = 2.5, fig.width = 5, fig.align = 'center', fig.cap = "Wine quality class imbalance."}
 winequality %>%
@@ -174,13 +109,11 @@ ggplot(data_long, aes(x = qualityclass, y = value)) +
 
 ```
 
-
-
-In this paper we are going to be looking at two main research questions. The first one focuses on developing a model that would work well to classify wines into three categories, which are: poor quality, normal quality and high quality. As stated in the problem description, it is desirable to classify wines using physicochemical properties since this does not involve human bias that would come into play with human tasters. We plan on using three different classification techniques. First, we will utilize random forests given prior investigation of the white wine data showed this technique seemed to work well; we would like to test this method using both white and red wine. Our second method is XGBoost, which is a gradient boosting framework that can be done in R. Previous papers on this data set have used different versions of gradient boosting like adaptive boost. Our final proposed method is KNN, as this seems to be a method that has not yet been used in any sort of wine classification.
-
-Additionally, as described above, an issue with our data is the imbalanced nature of the data set, with most of the wines being classified into the normal quality category. We are also interested in looking at different resampling techniques in order to determine if resampling is necessary here, and to identify which method of resampling method is best. We plan on running each of the classification methods to find predictions in conjunction with each of the resampling techniques for the sake of comparison. Initially, we will first look at the results of the classification method predictions if no resampling is done. Since the data is very imbalanced, we would expect this to probably not do well, but it gives a baseline. The second resampling method we will test is SMOTE, which is an algorithm where the minority class (in this case low and high quality), will be oversampled. This method runs the risk of overfitting the mode. The final resampling method that we will look at is random under sampler, where majority class data are randomly removed from the data set. This risks losing valuable information in our model. We are looking for the best prediction model using the combination of resampling and classification method, which will be determined using MSE.  
+The goal of this paper is train a model that would work well to classify wines into three categories, which are: poor quality, normal quality and high quality. It is desirable to classify wines using physicochemical properties since this does not involve human bias that would come into play with human tasters. We evaluated two classification techniques, eXtreme Boosting (XGBoost) and Random Forest. Given prior investigation of the white wine data showed the Random Forests technique performed well; we would like to test this method using both white and red wine. Previous papers on the wine data set have applied different versions of gradient boosting such as adaptive boost; we will apply XGBoost, an alternative gradient boosting technique. The quality categorization poses a challenge of working with imbalanced classes as there are many more normal quality wines than low or high quality wines (Figure \ref{fig:class-distribution}). To address this, we will evaluate different resampling techniques in order to determine if resampling improves performance and to identify which resampling method is best. Accuracy of each classification model applied in conjunction with each resampling method was compared. Initially, we will first evaluated the classifier performance with no resampling. Since the data is very imbalanced, we hypothesized this to have low performance but provide a baseline. We will then apply a resampling method using SMOTE, which is an algorithm where the minority class (in this case low and high quality), will be oversampled. We hypothesize this method runs the risk of overfitting the mode. The final resampling method applied is a random under sampler, where majority class data are randomly removed from the data set. We hypothesize this risks losing valuable information in our model. Accuracy of each classification method and resampling technique was evaluated by the overall correct classification rate and each individual group (low quality, normal quality, and high quality) correct classification rate.
 
 # Methods
+
+We applied two classification methods, XGBoost and Random Forest, on the original training set, the undersampled training set, and the oversampled training set. Accuracy of each classification method and resampling technique was evaluated by the overall correct classification rate and each individual group (low quality, normal quality, and high quality) correct classification rate. Monte Carlo Cross-Validation (MCMC) was used to select tuning parameters and evaluate model performance. The MCMC algorithm repeatedly splits the data into training and testing sets (B = 50) by randomly selecting the designated proportions (70% training; 30% testing) of the overall data set to each. The undersampling and oversampling techniques described below are then applied to the training set to obtain a final resampled training data set. For each split, the final resampled training data set is used to build the model and then accuracy is evaluated on the corresponding testing data set. The mean, 5th-quantile, and 95th-quantile of the correct classification rates are used to evaluate performance over the B splits. 
 
 ## Resampling
 Before we are able to consider the different classification methods, the imbalanced issue in our data must be examined. This is because typical classifier algorithms assume a relatively balanced distribution, so with imbalanced data they tend to be biased towards the majority class [Yanminsun, 2011]. Classification rules for the minority classes tend to be undiscovered or ignored, so the minority class is misclassified more often than the majority class. If we were to look at our data set from a binary standpoint where “Low” and “High” were classified as rare, and “Normal” was classified as not rare, the majority class has 6053 observations, and the minority class has 444 observations, which is a ratio of about 13:1. So due to this imbalanced nature in the data, classifying algorithms will be biased towards classifying wines as Normal, and causing poor predictions for the Low and High classes. When creating the resampled data sets, the binary classification of “rare” and “not rare” is used due to the resampling algorithms needing a binary class. 
@@ -193,9 +126,12 @@ SMOTE, which stands for Synthetic Minority Over-Sampling Technique, is an oversa
 
 ## Classification
 
+The two classification methods selected are tree based ensemble methods. We apply eXtreme Gradient Boosting (XGBoost) using the xgboost function with the multiclass classification using the softmax objective function with three classes maximizing the multiclass misclassfication error evaluation metric in the xgboost library \citep{xgboost}. This method combines the tree-based model approach by implementing recursive partitioning and the boosting algorithm which repeatedly optimizes classification methods on the training set. In repeated optimization, a weak classifier is fit on the original data set with each observation having equal weight, the weight is then calculated for the current model based on the error rate and observations are assigned new weights used to fit the next weak classifier. This process is repeated for a final boosted classifier given by the weighted sum of our weak classifiers. XGBoost allows for a variety of evaluation metrics providing a benefit over other boosting methods. Tuning parameters for maximum tree depth, step size shrinkage to prevent overfitting (eta) were selected by conducting a hyperparameter grid search with MCMC.
+
+
 # Results
 
-```{r accuracy-results, fig.align = 'left', fig.width = 9}
+```{r accuracy-results, fig.cap = "MCMC accuracy results for each classifier applied to each resampling technique."}
 
 # read in data
 MCMC.results <- read_csv("MCMC.results.csv")
@@ -213,8 +149,9 @@ MCMC.results %>%
   geom_errorbar(aes(xmin = lower, xmax = upper), position = position_dodge(width = 0.5), width = 0.4) +
   facet_wrap(~accuracyGroup, ncol = 1, labeller = labeller(accuracyGroup = accuracyGroup.labs)) +
   theme_bw() +
-  theme(aspect.ratio = 0.2) +
-  scale_y_discrete("Resampling Method") +
+  theme(aspect.ratio = 0.15,
+        legend.position = "bottom") +
+  scale_y_discrete("") +
   scale_x_continuous("Accuracy", limits = c(0,1), breaks = seq(0,1,0.2), labels = scales::percent) +
   scale_color_brewer("", palette = "Paired")
 ```

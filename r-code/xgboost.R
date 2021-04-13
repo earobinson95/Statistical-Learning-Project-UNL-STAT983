@@ -133,7 +133,7 @@ xgbFunc <-
                        nround = nround,
                        nthread = nthread,
                        objective = "multi:softprob",
-                       eval_metric = "mlogloss",
+                       eval_metric = "merror",
                        num_class = length(levels(train.qualityclass)),
                        verbose = 0
     )
@@ -168,15 +168,15 @@ xgbFunc <-
   }
 
 xgb.none.results <- xgbFunc(df = winequality, samplingMethod = "none", nUndersample = NA, kOversample = NA,
-                        trainPct = 0.7, max.depth = 20, eta = 0.00001, nround = 4, nthread = 2, show.table = T)
+                        trainPct = 0.7, max.depth = 50, eta = 0.1, nround = 4, nthread = 2, show.table = T)
 xgb.none.results 
 
 xgb.undersample.results <- xgbFunc(df = winequality, samplingMethod = "undersample", nUndersample = 2000, kOversample = NA,
-                               trainPct = 0.7, max.depth = 20, eta = 0.00001, nround = 4, nthread = 2, show.table = T)
+                               trainPct = 0.7, max.depth = 20, eta = 0.1, nround = 4, nthread = 2, show.table = T)
 xgb.undersample.results
 
 xgb.oversample.results <- xgbFunc(df = winequality, samplingMethod = "oversample", nUndersample = NA, kOversample = 5,
-                              trainPct = 0.7, max.depth = 20, eta = 0.00001, nround = 4, nthread = 2, show.table = T)
+                              trainPct = 0.7, max.depth = 50, eta = 0.1, nround = 4, nthread = 2, show.table = T)
 xgb.oversample.results
 
 xgb.results <- rbind(xgb.none.results$accuracy,
@@ -235,21 +235,21 @@ xgbMCMC <-
 # HYPERPARAMETER GRID SEARCH
 tic()
 xgbMCMC.none.results <- xgbMCMC(samplingMethod = "none", nUndersample = NA, kOversample = NA,
-                           trainPct = 0.7, B = 50, max.depth = 20, eta = 1e-4, nround = 4, nthread = 2)
+                           trainPct = 0.7, B = 50, max.depth = 50, eta = 1e-4, nround = 4, nthread = 2)
 toc()
 # xgbMCMC.none.results
 
 tic()
 xgbMCMC.undersample.results <- xgbMCMC(samplingMethod = "undersample", nUndersample = 2000, kOversample = NA,
-                           trainPct = 0.7, B = 50, max.depth = 20, eta = 1e-4, nround = 4, nthread = 2)
+                           trainPct = 0.7, B = 50, max.depth = 50, eta = 1e-4, nround = 4, nthread = 2)
 toc()
 # xgbMCMC.undersample.results
 
 tic()
 xgbMCMC.oversample.results <- xgbMCMC(samplingMethod = "oversample", nUndersample = NA, kOversample = 5,
-                           trainPct = 0.7, B = 50, max.depth = 20, eta = 0.00001, nround = 4, nthread = 2)
+                           trainPct = 0.7, B = 50, max.depth = 50, eta = 0.1, nround = 4, nthread = 2)
 toc()
-# xgbMCMC.oversample.results
+xgbMCMC.oversample.results
 
 
 xgbMCMC.results <- rbind(xgbMCMC.none.results,
