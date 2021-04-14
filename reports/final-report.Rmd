@@ -45,7 +45,7 @@ library(reshape2)
 <!-- \ak{Alison} -->
 <!-- \sa{Sarah} -->
 
-# Introduction - Needs some work
+# Introduction 
 Successful marketing campaigns and productive selling strategies are directly linked to communication about key indicators of quality; hence, objective measurements of quality are essential. 
 Within the wine industry, there are two types of quality assessment: physiochemical and sensory tests. 
 Sensory tests require a human expert to assess the quality of wine based on visual, taste, and smell \citep{hu2016classification}. 
