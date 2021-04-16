@@ -306,7 +306,7 @@ rfMCMC <-
 # ----------------------------------------------------------------------------------------------------------------------------------
 # HYPERPARAMETER GRID SEARCH -------------------------------------------------------------------------------------------------------
 # ----------------------------------------------------------------------------------------------------------------------------------
-setB = 50
+setB = 2
 
 # XGBOOST ----------------------------------------------------------
 
@@ -387,7 +387,7 @@ xgbMCMC.oversample.gridsearch <- xgbMCMC.oversample.gridsearch %>%
 xgbMCMC.oversample.gridsearch
 write.csv(xgbMCMC.oversample.gridsearch, file = "reports/xgbMCMC.oversample.gridsearch.csv", row.names = F, na = "")
 
-xgbMCMC.oversample.gridsearch.plot <- xgbMCMC.oversample.gridsearch[c(0:10),] %>%
+xgbMCMC.undersample.gridsearch.plot <- xgbMCMC.oversample.gridsearch[c(0:10),] %>%
   mutate(label = paste("Max Depth = ", max.depth, "; Eta = ", eta, "; nround = ", nround, "; nthread = ", nthread, " (k = ", kOversample, ")", sep = ""))
   ggplot(aes(x = mean, y = reorder(label, mean))) +
     geom_point() +
@@ -396,7 +396,7 @@ xgbMCMC.oversample.gridsearch.plot <- xgbMCMC.oversample.gridsearch[c(0:10),] %>
     scale_y_discrete("") +
     scale_x_continuous("Overall Accuracy", labels = scales::percent) +
     ggtitle("XGBoost (Oversampling)")
-xgbMCMC.oversample.gridsearch.plot
+xgbMCMC.undersample.gridsearch.plot
 
 # RANDOM FOREST ----------------------------------------------------------
 
@@ -431,7 +431,7 @@ rfMCMC.none.gridsearch.plot
 
 # Undersample
 tic()
-rfMCMC.undersample.gridsearch <- rfMCMC(samplingMethod = "none", 
+rfMCMC.none.gridsearch <- rfMCMC(samplingMethod = "none", 
                                  nUndersample = seq(1000, 2000, 500), 
                                  kOversample = NA,
                                  trainPct = 0.7, 
@@ -460,7 +460,7 @@ rfMCMC.undersample.gridsearch.plot
 
 # Oversample
 tic()
-rfMCMC.oversample.gridsearch <- rfMCMC(samplingMethod = "none", 
+rfMCMC.none.gridsearch <- rfMCMC(samplingMethod = "none", 
                                  nUndersample = NA, 
                                  kOversample = seq(3,7,2),
                                  trainPct = 0.7, 
