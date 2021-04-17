@@ -39,6 +39,7 @@ library(tidyverse)
 library(knitr)
 library(ggcorrplot)
 library(reshape2)
+library(patchwork)
 ```
 
 <!-- \er{Emily} -->
@@ -68,7 +69,7 @@ The goal of this paper is to train a model that would work well to classify wine
 
 In this paper, we apply classification and resampling techniques to the “Wine Quality Data Set” found on the UCI Data Repository \citep{UCIdataset}. The data is made up of vinho verde, which is a product from the northwest region of Portugal. The data was collected from May 2004 to February of 2007, and is made up of 1599 red wines and 4898 white wines for a total of 6493 observations \citep{cortez2009using}. For each of the wines in the dataset, 11 physiochemical variables were taken on it: fxed acidity, volatile acidity, citric acid, residual sugar, chlorides, free sulfur dioxide, total sulfur dioxide, density, pH, sulphates, and alcohol. Additionally, in our paper, we classified the combined red and white wine data sets, so included was a 12th predictor variable categorizing the given observation as red or white wine. Our response was a quality rating based on a sensory test carried out by at least three sommeliers, where a 0 was considered very bad and a 10 was excellent \cite{gupta2018selection}. Following \cite{hu2016classification}, we separated the wine into three classes: Low Quality $(\le 4)$, Normal (5-7), and High quality $(\ge 8)$. These response values are imbalanced as can be seen in Figure \ref{fig:class-distribution}, with most of the wines having a response of “Normal”. 
 
-```{r data}
+```{r data, echo = F}
 winequality <- read.csv("../data/winequality-all.csv")
 ```
 
@@ -149,22 +150,7 @@ We apply eXtreme Gradient Boosting (XGBoost) using the `xgboost` function with t
 
 **Go back and check these classification rates.**
 
-The hyperparameter grid search led to final best fit models for XGBoost and Random Forest with tuning parameters shown in Tables \ref{tab:xbg-final-mods} and \ref{tab:rf-final-mods} respectively. A comparison of the best classifiers is shown in Figure \ref{fig:accuracy-results}. With no resampling, the overall classification rate for Random Forest was between 93.7\% and 95\% while the rare classes had classification rates of 12\% and 33\% for low and high quality respectively. The XGBoost has a slight sacrifice in accruacy with a 91.7\% to 93.4\% overalll classification rate only 9.3\% and 7.7% classification rates for the low and high quality classes. When undersampling on the training data set is conducted, we see a slight decrease in overall accuracy with Random Forest perfomring at a 93.2\% to 94.8\% classification rate and XGBoost performing at a 90.1\% to 92.4\% classification rate. We see this decrease in the normal quality classificaiton rate, but an increase in the rare quality classification rates. The low quality accuracy for Random forest increased to 20.5\% while the high quality accuracy remained similar to that of no resampling at 34.8\%. With the XGBoost classifier, undersampling increased the low quality accuracy to 21.3\% and high quality accuracy to 26.8\%. We saw imense benefits of oversampling the training data set reaching a 100\% classification rate of all quality classes with the Random Forest classifier. This gain in accuracy from oversampling was also seen in the XGBoost classifier with overall classification rates between 97.3\% to 98.4\% and the rare classes reaching 95.2\% and 95.5\% classification rates for the low and high quality classes.
-
-```{r xgb-final-mod}
-xgbMCMC.none.gridsearch <- read_csv("xgbMCMC.none.gridsearch.csv")
-xgbMCMC.undersample.gridsearch <- read_csv("xgbMCMC.undersample.gridsearch.csv")
-xgbMCMC.oversample.gridsearch <- read_csv("xgbMCMC.oversample.gridsearch.csv")
-xgb_final_mods <- rbind(xgbMCMC.none.gridsearch[1,],
-                        xgbMCMC.undersample.gridsearch[1,],
-                        xgbMCMC.oversample.gridsearch[1,]) %>%
-  mutate(label = ifelse(samplingMethod == "none", "No Resampling",
-                        ifelse(samplingMethod == "undersample", paste("Undersampling (n = ", nUndersample, ")", sep = ""),
-                               paste("Oversampling (k = ", kOversample, ")", sep = "")))) %>%
-  select(label, max.depth, eta, nround, nthread)
-colnames(xgb_final_mods) <- c("Resampling", "Max Depth", "Eta", "Rounds", "Threads") 
-xgb_final_mods %>% knitr::kable("latex", digits = 2, escape = F, booktabs = T, linesep = "", align = "c", label = "xbg-final-mods", caption = "Final tuning parameters for XGBoost classifier as determined by the MCMC hyperparameter grid search.")
-```
+The hyperparameter grid search led to final best fit models for Random Forest and XGBoost with tuning parameters shown in Tables \ref{tab:rf-final-mods} and \ref{tab:xbg-final-mods} respectively. A comparison of the best classifiers is shown in Figure \ref{fig:accuracy-results}. With no resampling, the overall classification rate for Random Forest was between 93.7\% and 95\% while the rare classes had classification rates of 12\% and 33\% for low and high quality respectively. The XGBoost has a slight sacrifice in accruacy with a 91.7\% to 93.4\% overalll classification rate only 9.3\% and 7.7% classification rates for the low and high quality classes. When undersampling on the training data set is conducted, we see a slight decrease in overall accuracy with Random Forest perfomring at a 93.2\% to 94.8\% classification rate and XGBoost performing at a 90.1\% to 92.4\% classification rate. We see this decrease in the normal quality classificaiton rate, but an increase in the rare quality classification rates. The low quality accuracy for Random forest increased to 20.5\% while the high quality accuracy remained similar to that of no resampling at 34.8\%. With the XGBoost classifier, undersampling increased the low quality accuracy to 21.3\% and high quality accuracy to 26.8\%. We saw imense benefits of oversampling the training data set reaching a 100\% classification rate of all quality classes with the Random Forest classifier. This gain in accuracy from oversampling was also seen in the XGBoost classifier with overall classification rates between 97.3\% to 98.4\% and the rare classes reaching 95.2\% and 95.5\% classification rates for the low and high quality classes.
 
 ```{r rf-final-mod}
 rfMCMC.none.gridsearch <- read_csv("rfMCMC.none.gridsearch.csv")
@@ -179,6 +165,21 @@ rf_final_mods <- rbind(rfMCMC.none.gridsearch[1,],
   select(label, ntree, mtry)
 colnames(rf_final_mods) <- c("Resampling", "N. Trees", "Mtry") 
 rf_final_mods %>% knitr::kable("latex", digits = 2, escape = F, booktabs = T, linesep = "", align = "c", label = "rf-final-mods", caption = "Final tuning parameters for Random Forest classifier as determined by the MCMC hyperparameter grid search.")
+```
+
+```{r xgb-final-mod}
+xgbMCMC.none.gridsearch <- read_csv("xgbMCMC.none.gridsearch.csv")
+xgbMCMC.undersample.gridsearch <- read_csv("xgbMCMC.undersample.gridsearch.csv")
+xgbMCMC.oversample.gridsearch <- read_csv("xgbMCMC.oversample.gridsearch.csv")
+xgb_final_mods <- rbind(xgbMCMC.none.gridsearch[1,],
+                        xgbMCMC.undersample.gridsearch[1,],
+                        xgbMCMC.oversample.gridsearch[1,]) %>%
+  mutate(label = ifelse(samplingMethod == "none", "No Resampling",
+                        ifelse(samplingMethod == "undersample", paste("Undersampling (n = ", nUndersample, ")", sep = ""),
+                               paste("Oversampling (k = ", kOversample, ")", sep = "")))) %>%
+  select(label, max.depth, eta, nround, nthread)
+colnames(xgb_final_mods) <- c("Resampling", "Max Depth", "Eta", "Rounds", "Threads") 
+xgb_final_mods %>% knitr::kable("latex", digits = 2, escape = F, booktabs = T, linesep = "", align = "c", label = "xbg-final-mods", caption = "Final tuning parameters for XGBoost classifier as determined by the MCMC hyperparameter grid search.")
 ```
 
 ```{r accuracy-results, fig.height = 6, fig.cap = "MCMC accuracy results for each classifier applied to each resampling technique."}
@@ -218,7 +219,7 @@ MCMC.results.plot
 # Supplementary Material {-}
 
 + **Data:** Data used was from the [UCI Data Repository](https://archive.ics.uci.edu/ml/datasets/Wine+Quality) \citep{UCIdataset}.
-+ **Code:** Access the final analysis code on [GitHub](https://github.com/earobinson95/Statistical-Learning-Project-UNL-STAT983/blob/main/reports/final-classification.R).
++ **Code:** Access the final analysis code on [GitHub](https://github.com/earobinson95/Statistical-Learning-Project-UNL-STAT983/blob/main/reports/final-classification.R) or in Appendix \ref{app:code}.
 
 # Course Reflection {-}
 
@@ -231,14 +232,12 @@ MCMC.results.plot
 + Overall really enjoyed the course!
 
 ```{r, include = F}
-# devtools::install_github("crsh/papaja") Alison - I'm commenting this all out for now
 library(papaja)
 render_appendix(
 "appendix.Rmd",
 bibliography = rmarkdown::metadata$bibliography,
 csl = rmarkdown::metadata$csl,
-quiet = TRUE
+quiet = FALSE
 )
 ```
-
 

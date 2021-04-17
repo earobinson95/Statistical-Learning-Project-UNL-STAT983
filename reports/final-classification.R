@@ -496,17 +496,17 @@ setB = 100
 
 tic()
 xgbMCMC.none.results <- xgbMCMC(samplingMethod = "none", nUndersample = NA, kOversample = NA,
-                                trainPct = 0.7, B = setB, max.depth = 20, eta = 1e-4, nround = 4, nthread = 2)
+                                trainPct = 0.7, B = setB, max.depth = 50, eta = 0.75, nround = 12, nthread = 8)
 toc()
 
 tic()
-xgbMCMC.undersample.results <- xgbMCMC(samplingMethod = "undersample", nUndersample = 2000, kOversample = NA,
-                                       trainPct = 0.7, B = setB, max.depth = 20, eta = 1e-4, nround = 4, nthread = 2)
+xgbMCMC.undersample.results <- xgbMCMC(samplingMethod = "undersample", nUndersample = 1000, kOversample = NA,
+                                       trainPct = 0.7, B = setB, max.depth = 50, eta = 0.10, nround = 2, nthread = 2)
 toc()
 
 tic()
-xgbMCMC.oversample.results <- xgbMCMC(samplingMethod = "oversample", nUndersample = NA, kOversample = 5,
-                                      trainPct = 0.7, B = setB, max.depth = 20, eta = 1e-4, nround = 4, nthread = 2)
+xgbMCMC.oversample.results <- xgbMCMC(samplingMethod = "oversample", nUndersample = NA, kOversample = 3,
+                                      trainPct = 0.7, B = setB, max.depth = 50, eta = 0.10, nround = 2, nthread = 2)
 toc()
 
 
@@ -520,17 +520,17 @@ xgbMCMC.results <- rbind(xgbMCMC.none.results,
 # RANDOM FORST MCMC RESULTS
 tic()
 rfMCMC.none.results <- rfMCMC(B = setB, samplingMethod = "none", nUndersample = NA, kOversample = NA,
-                              trainPct = 0.7, ntree = 500, mtry = 4)
+                              trainPct = 0.7, ntree = 200, mtry = 2)
 toc()
 
 tic()
 rfMCMC.undersample.results <- rfMCMC(B = setB, samplingMethod = "undersample", nUndersample = 2000, kOversample = NA,
-                                     trainPct = 0.7, ntree = 500, mtry = 4)
+                                     trainPct = 0.7, ntree = 800, mtry = 2)
 toc()
 
 tic()
-rfMCMC.oversample.results <- rfMCMC(B = setB, samplingMethod = "oversample", nUndersample = NA, kOversample = 5,
-                                    trainPct = 0.7, ntree = 500, mtry = 4)
+rfMCMC.oversample.results <- rfMCMC(B = setB, samplingMethod = "oversample", nUndersample = NA, kOversample = 3,
+                                    trainPct = 0.7, ntree = 200, mtry = 3)
 toc()
 
 
@@ -543,7 +543,7 @@ rfMCMC.results <- rbind(rfMCMC.none.results,
 # COMBINE XGBOOST AND RANDOM FOREST RESULTS & PLOT
 MCMC.results <- rbind(xgbMCMC.results, rfMCMC.results)
 
-# write.csv(MCMC.results, "reports/MCMC.results.csv", row.names = F, na = "")
+write.csv(MCMC.results, "reports/MCMC.results.csv", row.names = F, na = "")
 MCMC.results <- read_csv("reports/MCMC.results.csv")
 
 # new facet labels
