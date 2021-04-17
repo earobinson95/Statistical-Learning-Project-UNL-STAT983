@@ -16,8 +16,8 @@ bibliography: references.bib
 output: 
   pdf_document:
     template: template.tex
-    include:
-      after_body: appendix.tex
+    # include:
+      # after_body: appendix.tex
 preamble:
   \usepackage[dvipsnames]{xcolor} % colors
   \newcommand{\er}[1]{{\textcolor{blue}{#1}}}
@@ -45,7 +45,7 @@ library(reshape2)
 <!-- \ak{Alison} -->
 <!-- \sa{Sarah} -->
 
-###  Introduction  ###
+#  Introduction
 
 Successful marketing campaigns and productive selling strategies are directly linked to communication about key indicators of quality; hence, objective measurements of quality are essential. 
 Within the wine industry, there are two types of quality assessment: physiochemical and sensory tests. 
@@ -59,15 +59,15 @@ These techniques also have the advantage of identifying important the physiochem
 
 The goal of this paper was to generate models that would utilize the objective physiochemical characteristics well to classify wines into three categories: poor quality, normal quality and high quality. 
 
-###  Methods  ###
+# Methods
 
-# Data Source; Variables and Outcomes of Interest
+## Data Source; Variables and Outcomes of Interest
 
 We applied classication and resampling techniques to the “Wine Quality Data Set” found on the UCI Data Repository at https://archive.ics.uci.edu/ml/datasets/Wine+Quality. [UCI, Cortez et al., 2009]. The data consist of information from samples of vinho verde, which is a product from the northwest region of Portugal. The data were collected from May, 2004 to February, 2007, and consisted of 1599 red wines and 4898 white wines for a total of 6493 observations [Cortez, 2009]. For each of the wines in the dataset, 11 physiochemical variables were recorded: fxed acidity, volatile acidity, citric acid, residual sugar, chlorides, free sulfur dioxide, total sulfur dioxide, density, pH, sulphates, and alcohol. Additionally, we classified the combined red and white wine data sets, and included an additional predictor variable categorizing the given observation as red or white wine. Our response was a quality rating based on a sensory test carried out by at least three sommeliers, where 0 was considered very bad and 10 was excellent [Gupta, 2018]. Following Hu et al. [2016], we separated the wine into three classes: Low Quality $(\le 4)$, Normal (5-7), and High quality $(\ge 8)$. 
 
 # Statistical Methods
 
-# Statistical Methods: Resampling
+## Statistical Methods: Resampling
 
 The categorization of quality was imbalanced as there were many more normal quality wines than low or high quality wines (Figure \ref{fig:class-distribution}), a significant challenge. Typically, classifier algorithms assume a relatively balanced distribution; therefore, imbalanced data tend to be biased towards the majority class [Yanminsun, 2011]. Classification rules for the minority classes tend to be undiscovered or ignored, so the minority class is misclassified more often than the majority class. To address this, we evaluated different resampling techniques in order to determine if resampling improved performance and to identify which resampling method was best. The goal with these methods is to create a data set that has close to a balanced class distribution, so the classifying algorithms will have better predictions, so it will predict to the minority class more accurately [Chawla, 2013]. We examined the data set from a binary standpoint where “Low” and “High” were classified as the minority (rare), and “Normal” was classified as the majority (not rare). When creating the resampled data sets, the binary classification of “rare” and “not rare” was used due to the resampling algorithms needing a binary class. 
 
@@ -79,7 +79,7 @@ The final resampling method we applied was a random under sampler. In this metho
 
 Accuracy of each classification method and resampling technique was evaluated by the overall correct classification rate and each individual group (low quality, normal quality, and high quality) correct classification rate.  
 
-#  Statistical Methods: Classification
+##  Statistical Methods: Classification
 
 We evaluated two classification techniques, which included Random Forest and eXtreme Boosting (XGBoost) methodology, both tree based ensemble methods. Prior investigation of the white wine data showed the Random Forests technique performed well; we wanted to test this method using both white and red wine. Previous papers on the wine data set have also applied different versions of gradient boosting such as adaptive boost; we utilized an alternative gradient boosting technique XGBoost. 
 
@@ -87,13 +87,13 @@ The first classficiation technique utilized the Random Forest algorithm and the 
 
 We also applied eXtreme Gradient Boosting (XGBoost) using the xgboost function with the multiclass classification using the softmax objective function with three classes maximizing the multiclass misclassfication error evaluation metric in the xgboost library \citep{xgboost}. This method combines the tree-based model approach by implementing recursive partitioning and the boosting algorithm which repeatedly optimizes classification methods on the training set. In repeated optimization, a weak classifier is fit on the original data set with each observation having equal weight, the weight is then calculated for the current model based on the error rate and observations are assigned new weights used to fit the next weak classifier. This process is repeated for a final boosted classifier given by the weighted sum of our weak classifiers. XGBoost allows for a variety of evaluation metrics providing a benefit over other boosting methods. Tuning parameters for maximum tree depth, step size shrinkage to prevent overfitting (eta) were selected by conducting a hyperparameter grid search with MCMC.
 
-# Statistical Methods: Cross-Validation
+## Statistical Methods: Cross-Validation
 
 Monte Carlo Cross-Validation (MCMC) was used to select tuning parameters and evaluate model performance. The MCMC algorithm repeatedly split the data into training and testing sets (B = 50) by randomly selecting the designated proportions (70% training; 30% testing) of the overall data set for each iteration. The undersampling and oversampling techniques described below were then applied to the training set to obtain a final resampled training data set. For each split, the final resampled training data set was used to build the model and the accuracy was evaluated on the corresponding testing data set. The mean, 5th-quantile, and 95th-quantile of the correct classification rates are presented as a performance metric for the B splits. 
 
 All analyses were completed with R version 3.6.1.
 
-###  Results  ###
+# Results
 
 The response values were imbalanced as seen in Figure \ref{fig:class-distribution}, with most of the wines having a response of “Normal”. 
 
@@ -121,7 +121,7 @@ winequality %>%
 
 It was found that the majority class had 6053 observations whereas the minority class had 444 observations, a ratio of about 13:1. Due to this imbalanced nature of these data, classifying algorithms were biased towards classifying wines as Normal, and causing poor predictions for the Low and High classes.  
 
-# Preliminaries; Sarah put in table and explanation in this section? SJA: sounds great
+## Preliminaries; Sarah put in table and explanation in this section? SJA: sounds great
 
 In Figure \ref{fig:boxplots}, boxplots of the 11 physiochemical variables are given. As can be see in this plot, for most of the predictor variables there are points that would be considered outliers, which are represented by black dots. We did not consider removing outliers, so no data points were removed for our final analysis. Looking at the boxplots, one can use these to give an idea of which of these predictor variables may be helpful in helping to determine the classification of the wines. For example, for alcohol, the Interquartile of the High category is above that of the Normal and Low class. Figure \ref{fig:correlation}, gives the correlation plot for the 11 physiochemical variables, with also the 0-10 scale for the quality of the wines. Correlations that are not considered to be statistically significant are not shown. Most of the correlations seem to be on the lower end of the spectrum, so multicollinearity does not seem to be a huge issue that needs to be addressed among the predictor variables.It also shows that all of the predictor variables have a statistically significant correlation with the response of quality, so they should be helpful for classification. 
 
@@ -145,7 +145,6 @@ ggcorrplot(corr, hc.order = TRUE,
            insig = "blank")
 
 ```
-
 
 
 ```{r accuracy-results, fig.cap = "MCMC accuracy results for each classifier applied to each resampling technique."}
@@ -173,24 +172,11 @@ MCMC.results %>%
   scale_color_brewer("", palette = "Paired")
 ```
 
-
-
-
-###  Discussion  ###
+# Discussion
 
 Place references concerning performance of each technique here and contrast with our results
 
 # Conclusion, Lessons Learned, and Future Directions
 
-```{r, include = F}
-# devtools::install_github("crsh/papaja") Alison - I'm commenting this all out for now
-#library(papaja)
-#render_appendix(
-  #"appendix.Rmd",
-  #bibliography = rmarkdown::metadata$bibliography,
-  #csl = rmarkdown::metadata$csl,
-  #quiet = TRUE
-#)
-```
 
 
