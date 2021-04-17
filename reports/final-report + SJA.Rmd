@@ -91,7 +91,7 @@ We also applied eXtreme Gradient Boosting (XGBoost) using the xgboost function w
 
 Monte Carlo Cross-Validation (MCMC) was used to select tuning parameters and evaluate model performance. The MCMC algorithm repeatedly split the data into training and testing sets (B = 50) by randomly selecting the designated proportions (70% training; 30% testing) of the overall data set for each iteration. The undersampling and oversampling techniques described below were then applied to the training set to obtain a final resampled training data set. For each split, the final resampled training data set was used to build the model and the accuracy was evaluated on the corresponding testing data set. The mean, 5th-quantile, and 95th-quantile of the correct classification rates are presented as a performance metric for the B splits. 
 
-All analyses were completed with R version 3.6.1; P < 0.05 was considered significant for the descriptive statistics.
+All analyses were completed with R version 3.6.1.
 
 ###  Results  ###
 
