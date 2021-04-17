@@ -12,26 +12,6 @@ library(smotefamily)
 
 set.seed(220355)
 
-#Tune the model
-model1_tuned <- tuneRF(x = winequalitytrain[,-1], y = winequalitytrain$qualityclass, ntreeTry = 500, mtryStart=3, stepFactor = 1,
-                       improve = 0.01, trace = FALSE)
-
-#Obtain Misclassification
-predTest <- predict(model1_tuned, winequalitytrain, type="class") 
-mean(predTest == winequalitytrain$qualityclass) 
-table(predTest, winequalitytrain$qualityclass) 
-importance(model1_tuned)
-varImpPlot(model1_tuned)
-
-#Fit Random Forest Model with Test Data 
-predTrain <- predict(model1_tuned, winequalitytest, type="class")
-mean(predTrain == winequalitytest$qualityclass) 
-table(predTrain, winequalitytest$qualityclass) 
-importance(model1_tuned)
-varImpPlot(model1_tuned)
-
-#4.11.2021 New Approach
-
 # IMPORT DATA, RELEVEL FACTOR COLUMNS, 
 winequality <- read_csv("data/winequality-all.csv") %>%
   mutate(type = factor(type, levels = c("red", "white")),
@@ -43,7 +23,7 @@ winequality <- read_csv("data/winequality-all.csv") %>%
 colnames(winequality) <- make.names(names(winequality), unique=TRUE)
 summary(winequality)
 
-#Drop quality variable
+# Drop quality variable
 var.out <- !names(winequality) %in% c("quality")
 winequality <- winequality[,var.out]
 
@@ -97,8 +77,9 @@ oversample <- function(train_df, k){
   return(oversample_df)
 }
 
-# SET UP FUNCTION TO EVALUATE RANDOM FOREST
-#Need to add mtry variability to functions for evaluation
+# SET UP FUNCTIONS TO EVALUATE RANDOM FOREST
+
+# Fit random forest
 rfFunc <- 
   function(df = winequality, samplingMethod = "none", nUndersample = 2000, kOversample = 5,
            trainPct = 0.7, importance = F, mtry = 4, ntree = 500, show.table = F){
@@ -124,18 +105,12 @@ rfFunc <-
       dplyr::select(qualityclass, type, fixed.acidity, volatile.acidity, citric.acid,
                     residual.sugar, chlorides, free.sulfur.dioxide, total.sulfur.dioxide,
                     density, pH, sulphates, alcohol)
-    # train.qualityclass <- train.data$qualityclass #I don't think I need this SJA
-    # train.label        <- as.integer(train.data$qualityclass)-1 # label conversion
-    # rf.train           <- list(data = train.data, label = train.label)
 
     # testing
     test.data  <- df[-train.index,] %>%     
       dplyr::select(qualityclass, type, fixed.acidity, volatile.acidity, citric.acid,
                     residual.sugar, chlorides, free.sulfur.dioxide, total.sulfur.dioxide,
                     density, pH, sulphates, alcohol)
-    # test.qualityclass <- test.data$qualityclass
-    # test.label        <- as.integer(test.data$qualityclass)-1 # label conversion
-    # rf.test           <- list(data = test.data, label = test.label)
 
     # Fit that Random Forest!
     rf.fit <- randomForest(qualityclass ~ ., 
@@ -145,12 +120,10 @@ rfFunc <-
                            mtry = mtry,
                            importance=importance
                            )
-    # rf.fit
-    
-    # Get that Prediction! I don't think you need to reshape, you want a vector of predicted values
+
+    # Get that Prediction! 
     rf.pred = predict(rf.fit, newdata = test.data) 
-    # length(rf.pred) # Should be nrow(test.data) x 1
-    
+
     # Evaluate Prediction
     accuracy.all  <- mean(rf.pred==test.data$qualityclass) #this is not working SJA
     table    <- table(test.data$qualityclass, rf.pred)
@@ -168,10 +141,51 @@ rfFunc <-
     
   }
 
+# Select number of variables sampled at each split
+rftuneFunc <- 
+  function(df = winequality, samplingMethod = "none", nUndersample = 2000, kOversample = 5,
+           trainPct = 0.7, 
+           stepFactor = 1, doBest=TRUE){
+    
+    require(tuneRF)
+    
+    # set up training/testing sets
+    n <- nrow(df)
+    train.index <- sample(seq(1,n), floor(n*trainPct), replace = F)
+    
+    # training
+    train.data <-  df[train.index,] # Normal
+    
+    if(samplingMethod == "undersample"){
+      train.data <- undersample(train.data, nUndersample) # Undersample
+    }
+    
+    if(samplingMethod == "oversample"){
+      train.data <- oversample(train.data, kOversample) # Oversample
+    }
+    
+    train.data <- train.data %>%  
+      dplyr::select(qualityclass, type, fixed.acidity, volatile.acidity, citric.acid,
+                    residual.sugar, chlorides, free.sulfur.dioxide, total.sulfur.dioxide,
+                    density, pH, sulphates, alcohol)
+    
+    # testing
+    test.data  <- df[-train.index,] %>%     
+      dplyr::select(qualityclass, type, fixed.acidity, volatile.acidity, citric.acid,
+                    residual.sugar, chlorides, free.sulfur.dioxide, total.sulfur.dioxide,
+                    density, pH, sulphates, alcohol)
+    
+    # Tune that Random Forest!
+    rf.tune <- tuneRF(x = train.data[,-1], y = train.data$qualityclass, stepFactor=stepFactor)
+
+  }
+
+# EVALUATE RANDOM FOREST AND MTRY
+
+# Random Forest Accuracy
+
 rf.none.results <- rfFunc(df = winequality, samplingMethod = "none", nUndersample = NA, kOversample = NA, trainPct = 0.7, ntree = 500, mtry = 4, show.table = T)
 rf.none.results 
-
-#not reviewed below SJA
 
 rf.undersample.results <- rfFunc(df = winequality, samplingMethod = "undersample", nUndersample = 2000, kOversample = NA, trainPct = 0.7, ntree = 500, mtry = 4, show.table = T)
 rf.undersample.results
@@ -193,6 +207,38 @@ rf.results %>%
   mutate(SampleMethod = factor(SampleMethod, levels = c("Oversampling", "Undersampling", "None")),
          AccruacyGroup = factor(AccuracyGroup, levels = c("accuracy.all", "accuracy.low", "accuracy.normal", "accuracy.high"))) %>%
 ggplot(aes(x = Accuracy, y = SampleMethod)) +
+  geom_point() +
+  facet_wrap(~ AccuracyGroup, ncol = 1) +
+  theme_bw() +
+  theme(aspect.ratio = 0.2) +
+  scale_y_discrete("") +
+  scale_x_continuous("Classification Rate", limits = c(0,1), breaks = seq(0,1,0.2), labels = scales::percent)
+
+# Random Forest Accuracy with Optimum Variable Selection
+
+rftune.none.results <- rfFunc(df = winequality, samplingMethod = "none", nUndersample = NA, kOversample = NA, trainPct = 0.7)
+rftune.none.results 
+
+rftune.undersample.results <- rfFunc(df = winequality, samplingMethod = "undersample", nUndersample = 2000, kOversample = NA, trainPct = 0.7)
+rftune.undersample.results
+
+rftune.oversample.results <- rfFunc(df = winequality, samplingMethod = "oversample", nUndersample = NA, kOversample = 5, trainPct = 0.7)
+rftune.oversample.results
+
+rftune.results <- rbind(rftune.none.results,
+                    rftune.undersample.results,
+                    rftune.oversample.results)
+rownames(rftune.results) <- c("None", "Undersampling", "Oversampling")
+
+rftune.results %>%
+  as.data.frame() %>%
+  rownames_to_column("SampleMethod") %>%
+  pivot_longer(cols = c("accuracy.all", "accuracy.low", "accuracy.normal", "accuracy.high"),
+               names_to = "AccuracyGroup",
+               values_to = "Accuracy") %>%
+  mutate(SampleMethod = factor(SampleMethod, levels = c("Oversampling", "Undersampling", "None")),
+         AccruacyGroup = factor(AccuracyGroup, levels = c("accuracy.all", "accuracy.low", "accuracy.normal", "accuracy.high"))) %>%
+  ggplot(aes(x = Accuracy, y = SampleMethod)) +
   geom_point() +
   facet_wrap(~ AccuracyGroup, ncol = 1) +
   theme_bw() +
@@ -272,3 +318,6 @@ rfMCMC.results %>%
   scale_y_discrete("") +
   scale_x_continuous("Accuracy", limits = c(0,1), breaks = seq(0,1,0.2), labels = scales::percent) +
   ggtitle("Random Forest \nntree = 500; mtry = 4")
+
+rfMCMC.results
+
