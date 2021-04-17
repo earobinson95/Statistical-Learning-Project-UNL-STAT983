@@ -431,7 +431,7 @@ rfMCMC.none.gridsearch.plot
 
 # Undersample
 tic()
-rfMCMC.undersample.gridsearch <- rfMCMC(samplingMethod = "none", 
+rfMCMC.undersample.gridsearch <- rfMCMC(samplingMethod = "undersample", 
                                  nUndersample = seq(1000, 2000, 500), 
                                  kOversample = NA,
                                  trainPct = 0.7, 
@@ -460,7 +460,7 @@ rfMCMC.undersample.gridsearch.plot
 
 # Oversample
 tic()
-rfMCMC.oversample.gridsearch <- rfMCMC(samplingMethod = "none", 
+rfMCMC.oversample.gridsearch <- rfMCMC(samplingMethod = "oversample", 
                                  nUndersample = NA, 
                                  kOversample = seq(3,7,2),
                                  trainPct = 0.7, 
