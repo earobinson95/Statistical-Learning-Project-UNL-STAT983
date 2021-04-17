@@ -12,26 +12,6 @@ library(smotefamily)
 
 set.seed(220355)
 
-#Import data
-winequality <- read.csv("../data/winequality-all.csv")
-
-#Drop quality variable
-var.out <- !names(winequality) %in% c("quality")
-winequality <- winequality[,var.out]
-
-#Delineate testing and training data
-n = dim(winequality)
-n1 = round(n/3.333)
-flag = sort(sample(1:n,n1))
-winequalitytest = winequality[flag,]
-winequalitytrain = winequality[-flag,]
-
-#Fit Random Forest Model with Training Data
-model1 <- randomForest(qualityclass ~ ., method="class", data=winequalitytrain) 
-model1
-plot(model1)
-varImpPlot(model1) 
-
 #Tune the model
 model1_tuned <- tuneRF(x = winequalitytrain[,-1], y = winequalitytrain$qualityclass, ntreeTry = 500, mtryStart=3, stepFactor = 1,
                        improve = 0.01, trace = FALSE)
@@ -50,8 +30,6 @@ table(predTrain, winequalitytest$qualityclass)
 importance(model1_tuned)
 varImpPlot(model1_tuned)
 
-
-
 #4.11.2021 New Approach
 
 # IMPORT DATA, RELEVEL FACTOR COLUMNS, 
@@ -64,6 +42,10 @@ winequality <- read_csv("data/winequality-all.csv") %>%
                              ifelse(qualityclass == "Normal", 1, 2)))
 colnames(winequality) <- make.names(names(winequality), unique=TRUE)
 summary(winequality)
+
+#Drop quality variable
+var.out <- !names(winequality) %in% c("quality")
+winequality <- winequality[,var.out]
 
 # FUNCTION FOR UNDERSAMPLING
 undersample <- function(train_df, nsample){
@@ -169,15 +151,6 @@ rfFunc <-
     rf.pred = predict(rf.fit, newdata = test.data) 
     # length(rf.pred) # Should be nrow(test.data) x 1
     
-    ### THIS IS SPECIFIC TO XGBOOST DON"T NEED - I think I need something from below, issue with dimensionality of pred SJA,
-    # colnames(rf) = levels(train.qualityclass)
-    # rf.pred$prediction = apply(rf.pred, 1, function(x) colnames(rf.pred)[which.max(x)])
-    # rf.pred$label = levels(train.qualityclass)[test.label + 1]
-    # rf.pred <- rf.pred %>%
-    #   mutate(prediction = factor(prediction, levels = c("Low", "Normal", "High")),
-    #          label = factor(label, levels = c("Low", "Normal", "High")))
-    #####
-    
     # Evaluate Prediction
     accuracy.all  <- mean(rf.pred==test.data$qualityclass) #this is not working SJA
     table    <- table(test.data$qualityclass, rf.pred)
@@ -262,7 +235,6 @@ rfMCMC <-
     return(results)
     
   }
-
 
 # HYPERPARAMETER GRID SEARCH
 tic()
