@@ -39,6 +39,13 @@ library(tidyverse)
 library(knitr)
 library(ggcorrplot)
 library(reshape2)
+library(Hmisc)
+library(Gmisc)
+library(randomForest)
+library(readr)
+library(tictoc) 
+library(furrr)
+library(smotefamily)
 ```
 
 <!-- \er{Emily} -->
@@ -67,6 +74,8 @@ We applied classication and resampling techniques to the “Wine Quality Data Se
 
 # Statistical Methods
 
+Continuous variables are presented as median and interquartile range (IQR) whereas discrete variables are presented as counts and proportions (%). Data were stratified by three classes of quality and comparisons were made with the Kruskal-Wallis and chi-square tests for continuous and discrete variables, respectively. We did not conduct post-hoc testing to further investigate pairwise differences.
+
 # Statistical Methods: Resampling
 
 The categorization of quality was imbalanced as there were many more normal quality wines than low or high quality wines (Figure \ref{fig:class-distribution}), a significant challenge. Typically, classifier algorithms assume a relatively balanced distribution; therefore, imbalanced data tend to be biased towards the majority class [Yanminsun, 2011]. Classification rules for the minority classes tend to be undiscovered or ignored, so the minority class is misclassified more often than the majority class. To address this, we evaluated different resampling techniques in order to determine if resampling improved performance and to identify which resampling method was best. The goal with these methods is to create a data set that has close to a balanced class distribution, so the classifying algorithms will have better predictions, so it will predict to the minority class more accurately [Chawla, 2013]. We examined the data set from a binary standpoint where “Low” and “High” were classified as the minority (rare), and “Normal” was classified as the majority (not rare). When creating the resampled data sets, the binary classification of “rare” and “not rare” was used due to the resampling algorithms needing a binary class. 
@@ -91,7 +100,7 @@ We also applied eXtreme Gradient Boosting (XGBoost) using the xgboost function w
 
 Monte Carlo Cross-Validation (MCMC) was used to select tuning parameters and evaluate model performance. The MCMC algorithm repeatedly split the data into training and testing sets (B = 50) by randomly selecting the designated proportions (70% training; 30% testing) of the overall data set for each iteration. The undersampling and oversampling techniques described below were then applied to the training set to obtain a final resampled training data set. For each split, the final resampled training data set was used to build the model and the accuracy was evaluated on the corresponding testing data set. The mean, 5th-quantile, and 95th-quantile of the correct classification rates are presented as a performance metric for the B splits. 
 
-All analyses were completed with R version 3.6.1.
+All analyses were completed with R version 3.6.1; P < 0.05 was deemed significant.
 
 ###  Results  ###
 
@@ -119,11 +128,79 @@ winequality %>%
   scale_y_continuous("Proportion", limits = c(0, 1.1), breaks = seq(0, 1, 0.2), labels = scales::percent)
 ```
 
-It was found that the majority class had 6053 observations whereas the minority class had 444 observations, a ratio of about 13:1. Due to this imbalanced nature of these data, classifying algorithms were biased towards classifying wines as Normal, and causing poor predictions for the Low and High classes.  
-
 # Preliminaries; Sarah put in table and explanation in this section? SJA: sounds great
 
-In Figure \ref{fig:boxplots}, boxplots of the 11 physiochemical variables are given. As can be see in this plot, for most of the predictor variables there are points that would be considered outliers, which are represented by black dots. We did not consider removing outliers, so no data points were removed for our final analysis. Looking at the boxplots, one can use these to give an idea of which of these predictor variables may be helpful in helping to determine the classification of the wines. For example, for alcohol, the Interquartile of the High category is above that of the Normal and Low class. Figure \ref{fig:correlation}, gives the correlation plot for the 11 physiochemical variables, with also the 0-10 scale for the quality of the wines. Correlations that are not considered to be statistically significant are not shown. Most of the correlations seem to be on the lower end of the spectrum, so multicollinearity does not seem to be a huge issue that needs to be addressed among the predictor variables.It also shows that all of the predictor variables have a statistically significant correlation with the response of quality, so they should be helpful for classification. 
+```{r descriptives}
+# https://cran.r-project.org/web/packages/Gmisc/vignettes/Descriptives.html;
+
+#Style all of the table output using htmlTable's theme handler
+htmlTable::setHtmlTableTheme(css.rgroup = "")
+
+winequality$qualityclass <- factor(winequality$qualityclass, levels=c("Low","Normal","High"),
+                            #labels=c("Low (N=246)","Normal (N=6,053)","High (N=198)")
+                            )
+winequality$type <- factor(winequality$type, levels=c("red","white"),
+                    labels=c("Red Wine","White Wine"))
+
+label(winequality$qualityclass)         <- "Quality"
+label(winequality$type)                 <- "Type"
+label(winequality$fixed.acidity)        <- "Fixed Acidity"
+units(winequality$fixed.acidity)        <- "(g tartaric acid/dm^3), median (IQR)"
+label(winequality$volatile.acidity)     <- "Volatile Acidity"
+units(winequality$volatile.acidity)     <- "(g acetic acid/dm^3), median (IQR)"
+label(winequality$citric.acid)          <- "Citric Acid"
+units(winequality$citric.acid)          <- "(g/dm^3), median (IQR)"
+label(winequality$residual.sugar)       <- "Residual Sugar"
+units(winequality$residual.sugar)       <- "(g/dm^3), median (IQR)"
+label(winequality$chlorides)            <- "Chlorides"
+units(winequality$chlorides)            <- "(g sodium chloride/dm^3), median (IQR)"
+label(winequality$free.sulfur.dioxide)  <- "Free Sulfur Dioxide"
+units(winequality$free.sulfur.dioxide)  <- "(mg/dm^3), median (IQR)"
+label(winequality$total.sulfur.dioxide) <- "Total Sulfur Dioxide"
+units(winequality$total.sulfur.dioxide) <- "(mg/dm^3), median (IQR)"
+label(winequality$density)              <- "Density"
+units(winequality$density)              <- "(g/cm^3), median (IQR)"
+label(winequality$pH)                   <- "pH"
+units(winequality$pH)                   <- "median (IQR)"
+label(winequality$sulphates)            <- "Sulphates"
+units(winequality$sulphates)            <- "(g potassium sulphate/dm^3), median (IQR)"
+label(winequality$alcohol)              <- "Alcohol"
+units(winequality$alcohol)              <- "(volume %), median (IQR)"
+
+getTable1Stats <- function(x, digits = 0, ...){
+  getDescriptionStatsBy(x = x,
+                        by = winequality$qualityclass,
+                        digits = digits,
+                        continuous_fn = describeMedian,
+                        header_count = TRUE,
+                        NEJMstyle = TRUE,
+                        ...)
+}
+
+t1 <- list()
+#t1[["Red vs. White Wine Type"]] <- getTable1Stats(winequality$type)
+t1[["Fixed Acidity"]] <- getTable1Stats(winequality$fixed.acidity)
+t1[["Volatile Acidity"]] <- getTable1Stats(winequality$volatile.acidity)
+t1[["CitricAcidity"]] <- getTable1Stats(winequality$citric.acid)
+t1[["Residual Sugar"]] <- getTable1Stats(winequality$residual.sugar)
+t1[["Chlorides"]] <- getTable1Stats(winequality$chlorides)
+t1[["Free Sulfur Dioxide"]] <- getTable1Stats(winequality$free.sulfur.dioxide)
+t1[["Total Sulfur Dioxide"]] <- getTable1Stats(winequality$total.sulfur.dioxide)
+t1[["Density"]] <- getTable1Stats(winequality$density)
+t1[["pH"]] <- getTable1Stats(winequality$pH)
+t1[["Sulphates"]] <- getTable1Stats(winequality$sulphates)
+t1[["Alcohol"]] <- getTable1Stats(winequality$alcohol)
+
+library(magrittr)
+mergeDesc(t1,getTable1Stats(winequality$type)) %>%
+          htmlTable(caption  = "Table 1. Basic Descriptive Statistics from the Wine Quality Dataset",
+                    tfoot = "Continuous variables are presented as median (IQR) and discrete variables are presented as count and proportion (%)")
+t1
+
+```
+Table 1 provides physiochemical characteristics stratified by three quality classes. There was statistical evidence of a difference between the three classes of quality for all variables except for pH (P < 0.001, respectively). The low designation of wine quality was associated with the highest amount of red wine, chlorides, density, fixed acidity, and volatile acidity, and the lowest amount of alcohol, citric acid, free sulfur dioxide, residual sugar, sulphates, and total sulfur dioxide.
+
+In Figure \ref{fig:boxplots}, boxplots of the 11 physiochemical variables are given. As can be see in this plot, for most of the predictor variables there are points that would be considered outliers, which are represented by black dots. We did not consider removing outliers as there was no evidence that any of these points represented erroneous data, so no data points were removed for our final analysis. Looking at the boxplots, one can use these to give an idea of which of these predictor variables may be helpful in helping to determine the classification of the wines. For example, for alcohol, the interquartile range of the High category is above that of the Normal and Low class. Figure \ref{fig:correlation}, gives the correlation plot for the 11 physiochemical variables, with also the 0-10 scale for the quality of the wines. Correlations that are not considered to be statistically significant are not shown. Most of the correlations seem to be on the lower end of the spectrum, so multicollinearity does not seem to be a huge issue that needs to be addressed among the predictor variables.It also shows that all of the predictor variables have a statistically significant correlation with the response of quality, so they should be helpful for classification. 
 
 ```{r boxplots, fig.cap="Distribution of the Predictor Variables"}
 winequality_noq = winequality[,-1]
@@ -146,7 +223,7 @@ ggcorrplot(corr, hc.order = TRUE,
 
 ```
 
-
+It was found that the majority class had 6053 observations whereas the minority class had 444 observations, a ratio of about 13:1. Due to this imbalanced nature of these data, classifying algorithms were biased towards classifying wines as Normal, and causing poor predictions for the Low and High classes. 
 
 ```{r accuracy-results, fig.cap = "MCMC accuracy results for each classifier applied to each resampling technique."}
 
@@ -173,8 +250,319 @@ MCMC.results %>%
   scale_color_brewer("", palette = "Paired")
 ```
 
+```{r Random-Forest}}
 
 
+# IMPORT DATA, RELEVEL FACTOR COLUMNS, 
+winequality <- read_csv("data/winequality-all.csv") %>%
+  mutate(type = factor(type, levels = c("red", "white")),
+         type01 = as.numeric(ifelse(type == "white", 0, 1)),
+         qualityclass = factor(qualityclass, levels = c("Low", "Normal", "High")),
+         under_class = ifelse(qualityclass == "Normal", 0, 1),
+         over_class = ifelse(qualityclass == "Low", 0, 
+                             ifelse(qualityclass == "Normal", 1, 2)))
+colnames(winequality) <- make.names(names(winequality), unique=TRUE)
+summary(winequality)
+
+# Drop quality variable
+var.out <- !names(winequality) %in% c("quality")
+winequality <- winequality[,var.out]
+
+# FUNCTION FOR UNDERSAMPLING
+undersample <- function(train_df, nsample){
+  df_wine_0_ind <- which(train_df$under_class == 0)
+  df_wine_1_ind <- which(train_df$under_class == 1)
+  pick_0 <- sample(df_wine_0_ind, nsample)
+  undersample_wine <- train_df[c(df_wine_1_ind,pick_0),] #Final Data frame
+  undersample_wine <- undersample_wine %>%
+    dplyr::select(qualityclass, type, fixed.acidity, volatile.acidity, citric.acid,
+                  residual.sugar, chlorides, free.sulfur.dioxide, total.sulfur.dioxide,
+                  density, pH, sulphates, alcohol)
+  # table(undersample_wine$under_class) # have just to make sure it's all balancing out how I think
+  return(undersample_wine)
+}
+
+# FUNCTION FOR OVERSAMPLING
+oversample <- function(train_df, k){
+  
+  winequality_low <- filter(winequality, qualityclass %in% c('Low'))
+  winequality_normal <- filter(winequality, qualityclass %in% c('Normal'))
+  winequality_high <- filter(winequality, qualityclass %in% c('High'))
+  
+  wine <- sort(sample(nrow(winequality_normal), nrow(winequality_normal)*0.5))
+  winequality_norm1 <- winequality_normal[wine,]
+  winequality_norm2 <- winequality_normal[-wine,]
+  
+  wine_LN <- rbind(winequality_low,winequality_norm1)
+  wine_HN <- rbind(winequality_high,winequality_norm2)
+  SMOTEData1 <- SMOTE(wine_LN[,c("fixed.acidity", "volatile.acidity", "citric.acid",
+                                 "residual.sugar", "chlorides", "free.sulfur.dioxide",
+                                 "total.sulfur.dioxide", "density", "pH", "sulphates", "alcohol",
+                                 "type01")], wine_LN[,"over_class"], K = k, dup_size = 0)
+  SMOTEData2 <- SMOTE(wine_HN[,c("fixed.acidity", "volatile.acidity", "citric.acid",
+                                 "residual.sugar", "chlorides", "free.sulfur.dioxide",
+                                 "total.sulfur.dioxide", "density", "pH", "sulphates", "alcohol",
+                                 "type01")], wine_HN[,"over_class"], K = k, dup_size = 0)
+  oversample_df1 <- SMOTEData1$data #Final data frame
+  oversample_df2 <- SMOTEData2$data #Final data frame
+  oversample_df <- rbind(oversample_df1,oversample_df2) %>%
+    mutate(type01 = round(type01)) %>%
+    mutate(type = as.factor(ifelse(type01 == 0, "white","red")),
+           qualityclass = ifelse(class == 0, "Low", 
+                                 ifelse(class == "1", "Normal","High"))) %>%
+    mutate(qualityclass = factor(qualityclass, levels = c("Low", "Normal", "High"))) %>%
+    dplyr::select(qualityclass, type, fixed.acidity, volatile.acidity, citric.acid,
+                  residual.sugar, chlorides, free.sulfur.dioxide, total.sulfur.dioxide,
+                  density, pH, sulphates, alcohol)
+  #table(oversample_df$class) have just to make sure it's all balancing out how I think 
+  return(oversample_df)
+}
+
+# SET UP FUNCTIONS TO EVALUATE RANDOM FOREST
+
+# Fit random forest
+rfFunc <- 
+  function(df = winequality, samplingMethod = "none", nUndersample = 2000, kOversample = 5,
+           trainPct = 0.7, importance = F, mtry = 4, ntree = 500, show.table = F){
+    
+    require(randomForest)
+  
+    # set up training/testing sets
+    n <- nrow(df)
+    train.index <- sample(seq(1,n), floor(n*trainPct), replace = F)
+    
+    # training
+    train.data <-  df[train.index,] # Normal
+    
+    if(samplingMethod == "undersample"){
+      train.data <- undersample(train.data, nUndersample) # Undersample
+    }
+    
+    if(samplingMethod == "oversample"){
+      train.data <- oversample(train.data, kOversample) # Oversample
+    }
+    
+    train.data <- train.data %>%  
+      dplyr::select(qualityclass, type, fixed.acidity, volatile.acidity, citric.acid,
+                    residual.sugar, chlorides, free.sulfur.dioxide, total.sulfur.dioxide,
+                    density, pH, sulphates, alcohol)
+
+    # testing
+    test.data  <- df[-train.index,] %>%     
+      dplyr::select(qualityclass, type, fixed.acidity, volatile.acidity, citric.acid,
+                    residual.sugar, chlorides, free.sulfur.dioxide, total.sulfur.dioxide,
+                    density, pH, sulphates, alcohol)
+
+    # Fit that Random Forest!
+    rf.fit <- randomForest(qualityclass ~ ., 
+                           data=train.data,
+                           method="class", 
+                           ntree=ntree,
+                           mtry = mtry,
+                           importance=importance
+                           )
+
+    # Get that Prediction! 
+    rf.pred = predict(rf.fit, newdata = test.data) 
+
+    # Evaluate Prediction
+    accuracy.all  <- mean(rf.pred==test.data$qualityclass) #this is not working SJA
+    table    <- table(test.data$qualityclass, rf.pred)
+    prop.table <- table/rowSums(table)
+    accuracy.low    <- prop.table[1,1]
+    accuracy.normal <- prop.table[2,2]
+    accuracy.high   <- prop.table[3,3]
+    accuracy <- cbind(accuracy.all, accuracy.low, accuracy.normal, accuracy.high)
+    
+    if(show.table){
+      return(list(accuracy = accuracy, table = table, prop.table = prop.table)) 
+    } else{
+      return(accuracy) 
+    }
+    
+  }
+
+# Select number of variables sampled at each split
+rftuneFunc <- 
+  function(df = winequality, samplingMethod = "none", nUndersample = 2000, kOversample = 5,
+           trainPct = 0.7, 
+           stepFactor = 1, doBest=TRUE){
+    
+    require(tuneRF)
+    
+    # set up training/testing sets
+    n <- nrow(df)
+    train.index <- sample(seq(1,n), floor(n*trainPct), replace = F)
+    
+    # training
+    train.data <-  df[train.index,] # Normal
+    
+    if(samplingMethod == "undersample"){
+      train.data <- undersample(train.data, nUndersample) # Undersample
+    }
+    
+    if(samplingMethod == "oversample"){
+      train.data <- oversample(train.data, kOversample) # Oversample
+    }
+    
+    train.data <- train.data %>%  
+      dplyr::select(qualityclass, type, fixed.acidity, volatile.acidity, citric.acid,
+                    residual.sugar, chlorides, free.sulfur.dioxide, total.sulfur.dioxide,
+                    density, pH, sulphates, alcohol)
+    
+    # testing
+    test.data  <- df[-train.index,] %>%     
+      dplyr::select(qualityclass, type, fixed.acidity, volatile.acidity, citric.acid,
+                    residual.sugar, chlorides, free.sulfur.dioxide, total.sulfur.dioxide,
+                    density, pH, sulphates, alcohol)
+    
+    # Tune that Random Forest!
+    rf.tune <- tuneRF(x = train.data[,-1], y = train.data$qualityclass, stepFactor=stepFactor)
+
+  }
+
+# EVALUATE RANDOM FOREST AND MTRY
+
+# Random Forest Accuracy
+
+rf.none.results <- rfFunc(df = winequality, samplingMethod = "none", nUndersample = NA, kOversample = NA, trainPct = 0.7, ntree = 500, mtry = 4, show.table = T)
+rf.none.results 
+
+rf.undersample.results <- rfFunc(df = winequality, samplingMethod = "undersample", nUndersample = 2000, kOversample = NA, trainPct = 0.7, ntree = 500, mtry = 4, show.table = T)
+rf.undersample.results
+
+rf.oversample.results <- rfFunc(df = winequality, samplingMethod = "oversample", nUndersample = NA, kOversample = 5, trainPct = 0.7, ntree = 500, mtry = 4, show.table = T)
+rf.oversample.results
+
+rf.results <- rbind(rf.none.results$accuracy,
+                     rf.undersample.results$accuracy,
+                     rf.oversample.results$accuracy)
+rownames(rf.results) <- c("None", "Undersampling", "Oversampling")
+
+rf.results %>%
+  as.data.frame() %>%
+  rownames_to_column("SampleMethod") %>%
+  pivot_longer(cols = c("accuracy.all", "accuracy.low", "accuracy.normal", "accuracy.high"),
+               names_to = "AccuracyGroup",
+               values_to = "Accuracy") %>%
+  mutate(SampleMethod = factor(SampleMethod, levels = c("Oversampling", "Undersampling", "None")),
+         AccruacyGroup = factor(AccuracyGroup, levels = c("accuracy.all", "accuracy.low", "accuracy.normal", "accuracy.high"))) %>%
+ggplot(aes(x = Accuracy, y = SampleMethod)) +
+  geom_point() +
+  facet_wrap(~ AccuracyGroup, ncol = 1) +
+  theme_bw() +
+  theme(aspect.ratio = 0.2) +
+  scale_y_discrete("") +
+  scale_x_continuous("Classification Rate", limits = c(0,1), breaks = seq(0,1,0.2), labels = scales::percent)
+
+# Random Forest Accuracy with Optimum Variable Selection
+
+rftune.none.results <- rfFunc(df = winequality, samplingMethod = "none", nUndersample = NA, kOversample = NA, trainPct = 0.7)
+rftune.none.results 
+
+rftune.undersample.results <- rfFunc(df = winequality, samplingMethod = "undersample", nUndersample = 2000, kOversample = NA, trainPct = 0.7)
+rftune.undersample.results
+
+rftune.oversample.results <- rfFunc(df = winequality, samplingMethod = "oversample", nUndersample = NA, kOversample = 5, trainPct = 0.7)
+rftune.oversample.results
+
+rftune.results <- rbind(rftune.none.results,
+                    rftune.undersample.results,
+                    rftune.oversample.results)
+rownames(rftune.results) <- c("None", "Undersampling", "Oversampling")
+
+rftune.results %>%
+  as.data.frame() %>%
+  rownames_to_column("SampleMethod") %>%
+  pivot_longer(cols = c("accuracy.all", "accuracy.low", "accuracy.normal", "accuracy.high"),
+               names_to = "AccuracyGroup",
+               values_to = "Accuracy") %>%
+  mutate(SampleMethod = factor(SampleMethod, levels = c("Oversampling", "Undersampling", "None")),
+         AccruacyGroup = factor(AccuracyGroup, levels = c("accuracy.all", "accuracy.low", "accuracy.normal", "accuracy.high"))) %>%
+  ggplot(aes(x = Accuracy, y = SampleMethod)) +
+  geom_point() +
+  facet_wrap(~ AccuracyGroup, ncol = 1) +
+  theme_bw() +
+  theme(aspect.ratio = 0.2) +
+  scale_y_discrete("") +
+  scale_x_continuous("Classification Rate", limits = c(0,1), breaks = seq(0,1,0.2), labels = scales::percent)
+
+# MCMC FUNCTION WITH PARALLEL COMPUTING
+rfMCMC <- 
+  function(B = 5, samplingMethod = "none", nUndersample = 2000, kOversample = 5, trainPct = 0.7, ntree = 500, mtry = 4){
+    require(furrr)
+    
+    # Create Parameter Grid
+    mcmc.grid <- expand_grid(B = seq(1,B),
+                             samplingMethod = samplingMethod,
+                             nUndersample = nUndersample,
+                             kOversample = kOversample,
+                             trainPct = trainPct,
+                             ntree = ntree,
+                             mtry = mtry)
+    
+    # Obtain Accuracy
+    accuracyList <- furrr::future_pmap(mcmc.grid[,-1], rfFunc)
+    rfAccuracy <- matrix(unlist(accuracyList, use.names = TRUE), ncol = 4, nrow = nrow(mcmc.grid), byrow = T)
+    colnames(rfAccuracy) <- colnames(accuracyList[[1]])
+    
+    # Summarize Accuracy
+    results <- cbind(mcmc.grid, rfAccuracy) %>%
+      pivot_longer(cols = c("accuracy.all", "accuracy.low", "accuracy.normal", "accuracy.high"),
+                   names_to = "accuracyGroup",
+                   values_to = "accuracy") %>%
+      mutate(Method = "Random Forest") %>%
+      dplyr::group_by(Method, accuracyGroup, samplingMethod, nUndersample, kOversample, ntree, mtry) %>%
+      summarise(B = n(),
+                mean  = mean(accuracy),
+                lower = quantile(accuracy, probs = c(0.05)),
+                upper = quantile(accuracy, probs = c(0.95))) %>%
+      ungroup()
+    
+    return(results)
+    
+  }
+
+# HYPERPARAMETER GRID SEARCH
+tic()
+rfMCMC.none.results <- rfMCMC(B = 50, samplingMethod = "none", nUndersample = NA, kOversample = NA,
+                                trainPct = 0.7, ntree = 500, mtry = 4)
+toc()
+# rfMCMC.none.results
+
+tic()
+rfMCMC.undersample.results <- rfMCMC(B = 50, samplingMethod = "undersample", nUndersample = 2000, kOversample = NA,
+                                      trainPct = 0.7, ntree = 500, mtry = 4)
+toc()
+# rfMCMC.undersample.results
+
+tic()
+rfMCMC.oversample.results <- rfMCMC(B = 50, samplingMethod = "oversample", nUndersample = NA, kOversample = 5,
+                                    trainPct = 0.7, ntree = 500, mtry = 4)
+toc()
+# rfMCMC.oversample.results
+
+
+rfMCMC.results <- rbind(rfMCMC.none.results,
+                        rfMCMC.undersample.results,
+                        rfMCMC.oversample.results)
+
+rfMCMC.results %>%
+  mutate(samplingMethod = factor(samplingMethod, levels = c("none", "undersample", "oversample")),
+         accuracyGroup = factor(accuracyGroup, levels = c("accuracy.all", "accuracy.low", "accuracy.normal", "accuracy.high"))) %>%
+  ggplot(aes(x = mean, y = samplingMethod)) +
+  geom_point() +
+  geom_errorbar(aes(xmin = lower, xmax = upper), width = 0.2) +
+  facet_wrap(~accuracyGroup, ncol = 1) +
+  theme_bw() +
+  theme(aspect.ratio = 0.2) +
+  scale_y_discrete("") +
+  scale_x_continuous("Accuracy", limits = c(0,1), breaks = seq(0,1,0.2), labels = scales::percent) +
+  ggtitle("Random Forest \nntree = 500; mtry = 4")
+
+rfMCMC.results
+
+```
 
 ###  Discussion  ###
 
