@@ -327,7 +327,7 @@ xgbMCMC.none.gridsearch <- xgbMCMC.none.gridsearch %>%
   filter(accuracyGroup == "accuracy.all") %>%
   arrange(-mean)
 xgbMCMC.none.gridsearch 
-write.csv(xgbMCMC.none.gridsearch, file = "reports/xgbMCMC.none.gridsearch.csv", row.names = F, na = "")
+# write.csv(xgbMCMC.none.gridsearch, file = "reports/xgbMCMC.none.gridsearch.csv", row.names = F, na = "")
 
 xgbMCMC.none.gridsearch.plot <- xgbMCMC.none.gridsearch[c(0:10),] %>%
   mutate(label = paste("Max Depth = ", max.depth, "; Eta = ", eta, "; nround = ", nround, "; nthread = ", nthread, sep = "")) %>%
@@ -356,7 +356,7 @@ xgbMCMC.undersample.gridsearch <- xgbMCMC.undersample.gridsearch %>%
   select(accuracyGroup == "accuracy.all") %>%
   arrange(-mean)
 xgbMCMC.undersample.gridsearch
-write.csv(xgbMCMC.undersample.gridsearch, file = "reports/xgbMCMC.undersample.gridsearch.csv", row.names = F, na = "")
+# write.csv(xgbMCMC.undersample.gridsearch, file = "reports/xgbMCMC.undersample.gridsearch.csv", row.names = F, na = "")
 
 xgbMCMC.undersample.gridsearch.plot <- xgbMCMC.undersample.gridsearch[c(0:10),] %>%
   mutate(label = paste("Max Depth = ", max.depth, "; Eta = ", eta, "; nround = ", nround, "; nthread = ", nthread, " (N = ", nundersample, ")", sep = ""))
@@ -385,7 +385,7 @@ xgbMCMC.oversample.gridsearch <- xgbMCMC.oversample.gridsearch %>%
   select(accuracyGroup == "accuracy.all") %>%
   arrange(-mean)
 xgbMCMC.oversample.gridsearch
-write.csv(xgbMCMC.oversample.gridsearch, file = "reports/xgbMCMC.oversample.gridsearch.csv", row.names = F, na = "")
+# write.csv(xgbMCMC.oversample.gridsearch, file = "reports/xgbMCMC.oversample.gridsearch.csv", row.names = F, na = "")
 
 xgbMCMC.oversample.gridsearch.plot <- xgbMCMC.oversample.gridsearch[c(0:10),] %>%
   mutate(label = paste("Max Depth = ", max.depth, "; Eta = ", eta, "; nround = ", nround, "; nthread = ", nthread, " (k = ", kOversample, ")", sep = ""))
@@ -416,7 +416,7 @@ rfMCMC.none.gridsearch <- rfMCMC.none.gridsearch %>%
   filter(accuracyGroup == "accuracy.all") %>%
   arrange(-mean)
 rfMCMC.none.gridsearch 
-write.csv(rfMCMC.none.gridsearch, file = "reports/rfMCMC.none.gridsearch.csv", row.names = F, na = "")
+# write.csv(rfMCMC.none.gridsearch, file = "reports/rfMCMC.none.gridsearch.csv", row.names = F, na = "")
 
 rfMCMC.none.gridsearch.plot <- rfMCMC.none.gridsearch[c(0:10),] %>%
   mutate(label = paste("Ntree = ", ntree, "; mtry = ", mtry, sep = "")) %>%
@@ -445,7 +445,7 @@ rfMCMC.undersample.gridsearch <- rfMCMC.undersample.gridsearch %>%
   filter(accuracyGroup == "accuracy.all") %>%
   arrange(-mean)
 rfMCMC.undersample.gridsearch 
-write.csv(rfMCMC.undersample.gridsearch, file = "reports/rfMCMC.undersample.gridsearch.csv", row.names = F, na = "")
+# write.csv(rfMCMC.undersample.gridsearch, file = "reports/rfMCMC.undersample.gridsearch.csv", row.names = F, na = "")
 
 rfMCMC.undersample.gridsearch.plot <- rfMCMC.undersample.gridsearch[c(0:10),] %>%
   mutate(label = paste("Ntree = ", ntree, "; mtry = ", mtry, " (N = ", nUndersample, ")", sep = "")) %>%
@@ -474,7 +474,7 @@ rfMCMC.oversample.gridsearch <- rfMCMC.oversample.gridsearch %>%
   filter(accuracyGroup == "accuracy.all") %>%
   arrange(-mean)
 rfMCMC.oversample.gridsearch 
-write.csv(rfMCMC.oversample.gridsearch, file = "reports/rfMCMC.oversample.gridsearch.csv", row.names = F, na = "")
+# write.csv(rfMCMC.oversample.gridsearch, file = "reports/rfMCMC.oversample.gridsearch.csv", row.names = F, na = "")
 
 rfMCMC.oversample.gridsearch.plot <- rfMCMC.oversample.gridsearch[c(0:10),] %>%
   mutate(label = paste("Ntree = ", ntree, "; mtry = ", mtry, " (k = ", kOversample, ")", sep = "")) %>%
