@@ -492,7 +492,7 @@ rfMCMC.oversample.gridsearch.plot
 # ----------------------------------------------------------------------------------------------------------------------------------
 
 # XGBOOST MCMC RESULTS
-setB = 500
+setB = 100
 
 tic()
 xgbMCMC.none.results <- xgbMCMC(samplingMethod = "none", nUndersample = NA, kOversample = NA,
