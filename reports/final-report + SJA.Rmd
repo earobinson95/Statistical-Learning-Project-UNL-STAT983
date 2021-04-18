@@ -582,7 +582,7 @@ Results from the Random Forest algorithm (Table X.) revealed that oversampling o
 
 Per Table X., upon the consideration of the optimal selection of the number of considered variables, it was found that overall accuracy consistently decreased for each sampling technique except oversampling (No sampling: 94.3%; Undersampling: 93.9%; Oversampling: 100.0%). This was true also for the low (No sampling: 7.6%; Undersampling: 13.0%; Oversampling: 100.0%) and high quality (No sampling: 34.6%; Undersampling: 32.7%; Oversampling: 100.0%) classifications as well. In contrast, this variable selection process induced an outperformance for the normal quality designation (No sampling: 99.8%; Undersampling: 99.2%; Oversampling: 100.0%).  
 
-Currently getting unstable results from MCMC, needs revision. 
+Incorporation of cross-validation with the Random Forest algorithm showed that accuracy was relatively precise for the overall data [No sampling: 94.3 (95% CrI: 93.7% to 95.1%); Undersampling: 93.8% (92.9% to 94.8%); Oversampling: 100.0% (100.0% to 100.0%) and normal classification [No sampling: 99.7% (99.6% to 99.9%); Undersampling: 98.8% (98.1% to 99.4%); Oversampling: 100.0% (100.0% to 100.0%)]. This was not the case for the low [No sampling: 11.8% (7.4% to 16.5%); Undersampling: 20.3% (13.1% to 27.3%); Oversampling: 100.0% (100.0% to 100.0%)] and high quality classifications [No sampling: 30.6% (22.9% to 42.3%); Undersampling: 34.2% (25.9% to 43.4%); Oversampling: 100.0% (100.0% to 100.0%)].
 
 ###  Discussion  ###
 =======
