@@ -578,6 +578,12 @@ rfMCMC.results
 
 ```
 
+Results from the Random Forest algorithm (Table X.) revealed that oversampling outperformed undersampling. For the overall data, the baseline accuracy was high (95.0%), which slightly dropped with undersampling (94.5%). Incorporation of oversampling via SMOTE increased accuracy to 100.0%. For the low quality wine classification subset, accuracy had a low baseline value of 12.9%, which increased to 32.8% and 100.0% for undersampling and oversampling, respectively. For the normal classification, accuracy was fairly stable. The baseline accuracy (99.6%) dropped slightly with undersampling (98.6%) and then was maximized with oversampling (100.0%). Finally, the relatively rare classification of high quality wine did not have a high baseline accuracy (42.9%), which improved slightly with undersampling (44.8%), and again was maximized with oversampling (100.0%).
+
+Per Table X., upon the consideration of the optimal selection of the number of considered variables, it was found that overall accuracy consistently decreased for each sampling technique except oversampling (No sampling: 94.3%; Undersampling: 93.9%; Oversampling: 100.0%). This was true also for the low (No sampling: 7.6%; Undersampling: 13.0%; Oversampling: 100.0%) and high quality (No sampling: 34.6%; Undersampling: 32.7%; Oversampling: 100.0%) classifications as well. In contrast, this variable selection process induced an outperformance for the normal quality designation (No sampling: 99.8%; Undersampling: 99.2%; Oversampling: 100.0%).  
+
+Currently getting unstable results from MCMC, needs revision. 
+
 ###  Discussion  ###
 =======
 # Discussion
