@@ -165,9 +165,8 @@ $if(highlighting-macros)$
 $highlighting-macros$
 $endif$
 
-\title{$title$ \\ $subtitle$}
-\author{by $for(author)$$author.name$$sep$, $endfor$}
-
+\title{$title.title$ \\ $title.subtitle$}
+\author{$for(author)$$author.name$, $author.email$ $sep$\\ $endfor$}
 
 \begin{document}
 
