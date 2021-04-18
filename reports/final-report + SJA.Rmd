@@ -74,13 +74,7 @@ We applied classication and resampling techniques to the “Wine Quality Data Se
 
 # Statistical Methods
 
-<<<<<<< HEAD
-Continuous variables are presented as median and interquartile range (IQR) whereas discrete variables are presented as counts and proportions (%). Data were stratified by three classes of quality and comparisons were made with the Kruskal-Wallis and chi-square tests for continuous and discrete variables, respectively. We did not conduct post-hoc testing to further investigate pairwise differences.
-
 # Statistical Methods: Resampling
-=======
-## Statistical Methods: Resampling
->>>>>>> e3a22a517e94603b0e7e4689b64e58d43374def6
 
 The categorization of quality was imbalanced as there were many more normal quality wines than low or high quality wines (Figure \ref{fig:class-distribution}), a significant challenge. Typically, classifier algorithms assume a relatively balanced distribution; therefore, imbalanced data tend to be biased towards the majority class [Yanminsun, 2011]. Classification rules for the minority classes tend to be undiscovered or ignored, so the minority class is misclassified more often than the majority class. To address this, we evaluated different resampling techniques in order to determine if resampling improved performance and to identify which resampling method was best. The goal with these methods is to create a data set that has close to a balanced class distribution, so the classifying algorithms will have better predictions, so it will predict to the minority class more accurately [Chawla, 2013]. We examined the data set from a binary standpoint where “Low” and “High” were classified as the minority (rare), and “Normal” was classified as the majority (not rare). When creating the resampled data sets, the binary classification of “rare” and “not rare” was used due to the resampling algorithms needing a binary class. 
 
@@ -132,13 +126,9 @@ winequality %>%
   scale_y_continuous("Proportion", limits = c(0, 1.1), breaks = seq(0, 1, 0.2), labels = scales::percent)
 ```
 
-<<<<<<< HEAD
 # Preliminaries; Sarah put in table and explanation in this section? SJA: sounds great
-=======
-It was found that the majority class had 6053 observations whereas the minority class had 444 observations, a ratio of about 13:1. Due to this imbalanced nature of these data, classifying algorithms were biased towards classifying wines as Normal, and causing poor predictions for the Low and High classes.  
 
-## Preliminaries; Sarah put in table and explanation in this section? SJA: sounds great
->>>>>>> e3a22a517e94603b0e7e4689b64e58d43374def6
+It was found that the majority class had 6053 observations whereas the minority class had 444 observations, a ratio of about 13:1. Due to this imbalanced nature of these data, classifying algorithms were biased towards classifying wines as Normal, and causing poor predictions for the Low and High classes.  
 
 ```{r descriptives}
 # https://cran.r-project.org/web/packages/Gmisc/vignettes/Descriptives.html;
@@ -210,6 +200,8 @@ t1
 ```
 Table 1 provides physiochemical characteristics stratified by three quality classes. There was statistical evidence of a difference between the three classes of quality for all variables except for pH (P < 0.001, respectively). The low designation of wine quality was associated with the highest amount of red wine, chlorides, density, fixed acidity, and volatile acidity, and the lowest amount of alcohol, citric acid, free sulfur dioxide, residual sugar, sulphates, and total sulfur dioxide. Again, we did not conduct post-hoc testing.
 
+Continuous variables are presented as median and interquartile range (IQR) whereas discrete variables are presented as counts and proportions (%). Data were stratified by three classes of quality and comparisons were made with the Kruskal-Wallis and chi-square tests for continuous and discrete variables, respectively. We did not conduct post-hoc testing to further investigate pairwise differences.
+
 In Figure \ref{fig:boxplots}, boxplots of the 11 physiochemical variables are given. As can be see in this plot, for most of the predictor variables there are points that would be considered outliers, which are represented by black dots. We did not consider removing outliers as there was no evidence that any of these points represented erroneous data, so no data points were removed for our final analysis. Looking at the boxplots, one can use these to give an idea of which of these predictor variables may be helpful in helping to determine the classification of the wines. For example, for alcohol, the interquartile range of the High category is above that of the Normal and Low class. Figure \ref{fig:correlation}, gives the correlation plot for the 11 physiochemical variables, with also the 0-10 scale for the quality of the wines. Correlations that are not considered to be statistically significant are not shown. Most of the correlations seem to be on the lower end of the spectrum, so multicollinearity does not seem to be a huge issue that needs to be addressed among the predictor variables.It also shows that all of the predictor variables have a statistically significant correlation with the response of quality, so they should be helpful for classification. 
 
 ```{r boxplots, fig.cap="Distribution of the Predictor Variables"}
@@ -233,10 +225,6 @@ ggcorrplot(corr, hc.order = TRUE,
 
 ```
 
-<<<<<<< HEAD
-It was found that the majority class had 6053 observations whereas the minority class had 444 observations, a ratio of about 13:1. Due to this imbalanced nature of these data, classifying algorithms were biased towards classifying wines as Normal, and causing poor predictions for the Low and High classes. 
-=======
->>>>>>> e3a22a517e94603b0e7e4689b64e58d43374def6
 
 ```{r accuracy-results, fig.cap = "MCMC accuracy results for each classifier applied to each resampling technique."}
 
@@ -263,9 +251,7 @@ MCMC.results %>%
   scale_color_brewer("", palette = "Paired")
 ```
 
-<<<<<<< HEAD
 ```{r Random-Forest}}
-
 
 # IMPORT DATA, RELEVEL FACTOR COLUMNS, 
 winequality <- read_csv("data/winequality-all.csv") %>%
@@ -584,10 +570,7 @@ Per Table X., upon the consideration of the optimal selection of the number of c
 
 Incorporation of cross-validation with the Random Forest algorithm showed that accuracy was relatively precise for the overall data [No sampling: 94.3 (95% CrI: 93.7% to 95.1%); Undersampling: 93.8% (92.9% to 94.8%); Oversampling: 100.0% (100.0% to 100.0%) and normal classification [No sampling: 99.7% (99.6% to 99.9%); Undersampling: 98.8% (98.1% to 99.4%); Oversampling: 100.0% (100.0% to 100.0%)]. This was not the case for the low [No sampling: 11.8% (7.4% to 16.5%); Undersampling: 20.3% (13.1% to 27.3%); Oversampling: 100.0% (100.0% to 100.0%)] and high quality classifications [No sampling: 30.6% (22.9% to 42.3%); Undersampling: 34.2% (25.9% to 43.4%); Oversampling: 100.0% (100.0% to 100.0%)].
 
-###  Discussion  ###
-=======
 # Discussion
->>>>>>> e3a22a517e94603b0e7e4689b64e58d43374def6
 
 Place references concerning performance of each technique here and contrast with our results
 
