@@ -342,7 +342,7 @@ xgbMCMC.none.gridsearch.plot
 
 tic()
 xgbMCMC.undersample.gridsearch <- xgbMCMC(samplingMethod = "undersample", 
-                                          nUndersample = seq(1000, 2000, 500), 
+                                          nUndersample = 2000, 
                                           kOversample = NA,
                                           trainPct = 0.7, 
                                           B = setB, 
@@ -359,7 +359,8 @@ xgbMCMC.undersample.gridsearch
 # write.csv(xgbMCMC.undersample.gridsearch, file = "reports/xgbMCMC.undersample.gridsearch.csv", row.names = F, na = "")
 
 xgbMCMC.undersample.gridsearch.plot <- xgbMCMC.undersample.gridsearch[c(0:10),] %>%
-  mutate(label = paste("Max Depth = ", max.depth, "; Eta = ", eta, "; nround = ", nround, "; nthread = ", nthread, " (N = ", nundersample, ")", sep = ""))
+  filter(nUndersample == 2000) %>%
+  mutate(label = paste("Max Depth = ", max.depth, "; Eta = ", eta, "; nround = ", nround, "; nthread = ", nthread, " (N = ", nUndersample, ")", sep = ""))
 ggplot(aes(x = mean, y = reorder(label, mean))) +
   geom_point() +
   geom_errorbar(aes(xmin = lower, xmax = upper)) +

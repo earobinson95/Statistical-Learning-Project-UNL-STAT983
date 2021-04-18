@@ -11,7 +11,7 @@ author:
 affiliation:
   - num: a
     address: |
-      Department of Statistics, University of Nebraska - Lincoln,
+      Department of Statistics, University of Nebraska - Lincoln
 bibliography: references.bib
 output: 
   pdf_document:
@@ -154,9 +154,15 @@ We also applied eXtreme Gradient Boosting (XGBoost) using the `xgboost` function
 The hyperparameter grid search led to final best fit models for Random Forest and XGBoost with tuning parameters shown in Tables \ref{tab:rf-final-mods} and \ref{tab:xbg-final-mods} respectively. A comparison of the best classifiers is shown in Figure \ref{fig:accuracy-results}. With no resampling, the overall classification rate for Random Forest was between 93.7\% and 95\% while the rare classes had classification rates of 12\% and 33\% for low and high quality respectively. The XGBoost has a slight sacrifice in accruacy with a 91.7\% to 93.4\% overalll classification rate only 9.3\% and 7.7% classification rates for the low and high quality classes. When undersampling on the training data set is conducted, we see a slight decrease in overall accuracy with Random Forest perfomring at a 93.2\% to 94.8\% classification rate and XGBoost performing at a 90.1\% to 92.4\% classification rate. We see this decrease in the normal quality classificaiton rate, but an increase in the rare quality classification rates. The low quality accuracy for Random forest increased to 20.5\% while the high quality accuracy remained similar to that of no resampling at 34.8\%. With the XGBoost classifier, undersampling increased the low quality accuracy to 21.3\% and high quality accuracy to 26.8\%. We saw imense benefits of oversampling the training data set reaching a 100\% classification rate of all quality classes with the Random Forest classifier. This gain in accuracy from oversampling was also seen in the XGBoost classifier with overall classification rates between 97.3\% to 98.4\% and the rare classes reaching 95.2\% and 95.5\% classification rates for the low and high quality classes.
 
 ```{r rf-final-mod}
-rfMCMC.none.gridsearch <- read_csv("rfMCMC.none.gridsearch.csv")
-rfMCMC.undersample.gridsearch <- read_csv("rfMCMC.undersample.gridsearch.csv")
-rfMCMC.oversample.gridsearch <- read_csv("rfMCMC.oversample.gridsearch.csv")
+rfMCMC.none.gridsearch <- read_csv("rfMCMC.none.gridsearch.csv") %>%
+    filter(accuracyGroup == "accuracy.all") %>%
+  arrange(-mean)
+rfMCMC.undersample.gridsearch <- read_csv("rfMCMC.undersample.gridsearch.csv") %>%
+    filter(accuracyGroup == "accuracy.all", nUndersample == 2000) %>%
+  arrange(-mean)
+rfMCMC.oversample.gridsearch <- read_csv("rfMCMC.oversample.gridsearch.csv") %>%
+    filter(accuracyGroup == "accuracy.all") %>%
+  arrange(-mean)
 rf_final_mods <- rbind(rfMCMC.none.gridsearch[1,],
                         rfMCMC.undersample.gridsearch[1,],
                         rfMCMC.oversample.gridsearch[1,]) %>%
@@ -169,9 +175,15 @@ rf_final_mods %>% knitr::kable("latex", digits = 2, escape = F, booktabs = T, li
 ```
 
 ```{r xgb-final-mod}
-xgbMCMC.none.gridsearch <- read_csv("xgbMCMC.none.gridsearch.csv")
-xgbMCMC.undersample.gridsearch <- read_csv("xgbMCMC.undersample.gridsearch.csv")
-xgbMCMC.oversample.gridsearch <- read_csv("xgbMCMC.oversample.gridsearch.csv")
+xgbMCMC.none.gridsearch <- read_csv("xgbMCMC.none.gridsearch.csv") %>%
+    filter(accuracyGroup == "accuracy.all") %>%
+  arrange(-mean)
+xgbMCMC.undersample.gridsearch <- read_csv("xgbMCMC.undersample.gridsearch.csv") %>%
+    filter(accuracyGroup == "accuracy.all", nUndersample == 2000) %>%
+  arrange(-mean)
+xgbMCMC.oversample.gridsearch <- read_csv("xgbMCMC.oversample.gridsearch.csv") %>%
+    filter(accuracyGroup == "accuracy.all") %>%
+  arrange(-mean)
 xgb_final_mods <- rbind(xgbMCMC.none.gridsearch[1,],
                         xgbMCMC.undersample.gridsearch[1,],
                         xgbMCMC.oversample.gridsearch[1,]) %>%

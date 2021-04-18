@@ -18,7 +18,9 @@ library(patchwork)
 ```{r xgb-tuning, fig.height = 6, echo = F, eval = T}
 
 # No Resampling
-xgbMCMC.none.gridsearch <- read_csv("xgbMCMC.none.gridsearch.csv")
+xgbMCMC.none.gridsearch <- read_csv("xgbMCMC.none.gridsearch.csv")%>%
+    filter(accuracyGroup == "accuracy.all") %>%
+  arrange(-mean)
 xgbMCMC.none.gridsearch.plot <- xgbMCMC.none.gridsearch[c(0:10),] %>%
   mutate(label = paste("Max Depth = ", max.depth, "; Eta = ", eta, "; nround = ", nround, "; nthread = ", nthread, sep = "")) %>%
 ggplot(aes(x = mean, y = reorder(label, mean))) +
@@ -26,11 +28,13 @@ ggplot(aes(x = mean, y = reorder(label, mean))) +
   geom_errorbar(aes(xmin = lower, xmax = upper)) +
   theme_bw() +
   scale_y_discrete("") +
-  scale_x_continuous("Overall Accuracy", labels = scales::percent, limits = c(0.85, 1), breaks = seq(0.8, 1, 0.025)) +
+  scale_x_continuous("Overall Accuracy", labels = scales::percent, limits = c(0.90, 1), breaks = seq(0.8, 1, 0.025)) +
   ggtitle("XGBoost (No resampling)")
 
 # Undersampling
-xgbMCMC.undersample.gridsearch <- read_csv("xgbMCMC.undersample.gridsearch.csv")
+xgbMCMC.undersample.gridsearch <- read_csv("xgbMCMC.undersample.gridsearch.csv") %>% 
+  filter(accuracyGroup == "accuracy.all", nUndersample == 2000) %>%
+  arrange(-mean)
 xgbMCMC.undersample.gridsearch.plot <- xgbMCMC.undersample.gridsearch[c(0:10),] %>%
   mutate(label = paste("Max Depth = ", max.depth, "; Eta = ", eta, "; nround = ", nround, "; nthread = ", nthread, " (N = ", nUndersample, ")", sep = "")) %>%
 ggplot(aes(x = mean, y = reorder(label, mean))) +
@@ -38,11 +42,13 @@ ggplot(aes(x = mean, y = reorder(label, mean))) +
   geom_errorbar(aes(xmin = lower, xmax = upper)) +
   theme_bw() +
   scale_y_discrete("") +
-  scale_x_continuous("Overall Accuracy", labels = scales::percent, limits = c(0.85, 1), breaks = seq(0.8, 1, 0.025)) +
+  scale_x_continuous("Overall Accuracy", labels = scales::percent, limits = c(0.90, 1), breaks = seq(0.8, 1, 0.025)) +
   ggtitle("XGBoost (Undersampling)")
 
 # Oversample
-xgbMCMC.oversample.gridsearch <- read_csv("xgbMCMC.oversample.gridsearch.csv")
+xgbMCMC.oversample.gridsearch <- read_csv("xgbMCMC.oversample.gridsearch.csv") %>%
+    filter(accuracyGroup == "accuracy.all") %>%
+  arrange(-mean)
 xgbMCMC.oversample.gridsearch.plot <- xgbMCMC.oversample.gridsearch[c(0:10),] %>%
   mutate(label = paste("Max Depth = ", max.depth, "; Eta = ", eta, "; nround = ", nround, "; nthread = ", nthread, " (k = ", kOversample, ")", sep = "")) %>%
   ggplot(aes(x = mean, y = reorder(label, mean))) +
@@ -50,7 +56,7 @@ xgbMCMC.oversample.gridsearch.plot <- xgbMCMC.oversample.gridsearch[c(0:10),] %>
     geom_errorbar(aes(xmin = lower, xmax = upper)) +
     theme_bw() +
     scale_y_discrete("") +
-    scale_x_continuous("Overall Accuracy", labels = scales::percent, limits = c(0.85, 1), breaks = seq(0.8, 1, 0.025)) +
+    scale_x_continuous("Overall Accuracy", labels = scales::percent, limits = c(0.90, 1), breaks = seq(0.8, 1, 0.025)) +
     ggtitle("XGBoost (Oversampling)")
 
 xgbMCMC.none.gridsearch.plot /
@@ -63,7 +69,9 @@ xgbMCMC.oversample.gridsearch.plot
 ```{r rf-tuning, fig.height = 6, echo = F, eval = T}
 
 # No Resampling
-rfMCMC.none.gridsearch <- read_csv("rfMCMC.none.gridsearch.csv")
+rfMCMC.none.gridsearch <- read_csv("rfMCMC.none.gridsearch.csv") %>%
+    filter(accuracyGroup == "accuracy.all") %>%
+  arrange(-mean)
 rfMCMC.none.gridsearch.plot <- rfMCMC.none.gridsearch[c(0:10),] %>%
   mutate(label = paste("Ntree = ", ntree, "; mtry = ", mtry, sep = "")) %>%
 ggplot(aes(x = mean, y = reorder(label, mean))) +
@@ -71,11 +79,13 @@ ggplot(aes(x = mean, y = reorder(label, mean))) +
   geom_errorbar(aes(xmin = lower, xmax = upper)) +
   theme_bw() +
   scale_y_discrete("") +
-  scale_x_continuous("Overall Accuracy", labels = scales::percent, limits = c(0.85, 1), breaks = seq(0.8, 1, 0.025)) +
+  scale_x_continuous("Overall Accuracy", labels = scales::percent, limits = c(0.90, 1), breaks = seq(0.8, 1, 0.025)) +
   ggtitle("Random Forest (No resampling)")
 
 # Undersampling
-rfMCMC.undersample.gridsearch <- read_csv("rfMCMC.undersample.gridsearch.csv")
+rfMCMC.undersample.gridsearch <- read_csv("rfMCMC.undersample.gridsearch.csv")%>%
+    filter(accuracyGroup == "accuracy.all", nUndersample == 2000) %>%
+  arrange(-mean)
 rfMCMC.undersample.gridsearch.plot <- rfMCMC.undersample.gridsearch[c(0:10),] %>%
   mutate(label = paste("Ntree = ", ntree, "; mtry = ", mtry, " (N = ", nUndersample, ")", sep = "")) %>%
 ggplot(aes(x = mean, y = reorder(label, mean))) +
@@ -83,11 +93,13 @@ ggplot(aes(x = mean, y = reorder(label, mean))) +
   geom_errorbar(aes(xmin = lower, xmax = upper)) +
   theme_bw() +
   scale_y_discrete("") +
-  scale_x_continuous("Overall Accuracy", labels = scales::percent, limits = c(0.85, 1), breaks = seq(0.8, 1, 0.025)) +
+  scale_x_continuous("Overall Accuracy", labels = scales::percent, limits = c(0.90, 1), breaks = seq(0.8, 1, 0.025)) +
   ggtitle("Random Forest (Undersampling)")
 
 # Oversample
-rfMCMC.oversample.gridsearch <- read_csv("rfMCMC.oversample.gridsearch.csv")
+rfMCMC.oversample.gridsearch <- read_csv("rfMCMC.oversample.gridsearch.csv") %>%
+    filter(accuracyGroup == "accuracy.all") %>%
+  arrange(-mean)
 rfMCMC.oversample.gridsearch.plot <- rfMCMC.oversample.gridsearch[c(0:10),] %>%
   mutate(label = paste("Ntree = ", ntree, "; mtry = ", mtry, " (k = ", kOversample, ")", sep = "")) %>%
   ggplot(aes(x = mean, y = reorder(label, mean))) +
@@ -95,7 +107,7 @@ rfMCMC.oversample.gridsearch.plot <- rfMCMC.oversample.gridsearch[c(0:10),] %>%
     geom_errorbar(aes(xmin = lower, xmax = upper)) +
     theme_bw() +
     scale_y_discrete("") +
-    scale_x_continuous("Overall Accuracy", labels = scales::percent, limits = c(0.85, 1), breaks = seq(0.8, 1, 0.025)) +
+    scale_x_continuous("Overall Accuracy", labels = scales::percent, limits = c(0.90, 1), breaks = seq(0.8, 1, 0.025)) +
     ggtitle("Random Forest (Oversampling)")
 
 rfMCMC.none.gridsearch.plot /
