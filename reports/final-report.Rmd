@@ -39,7 +39,6 @@ library(tidyverse)
 library(knitr)
 library(ggcorrplot)
 library(reshape2)
-library(patchwork)
 ```
 
 <!-- \er{Emily} -->
@@ -69,7 +68,7 @@ The goal of this paper is to train a model that would work well to classify wine
 
 In this paper, we apply classification and resampling techniques to the “Wine Quality Data Set” found on the UCI Data Repository \citep{UCIdataset}. The data is made up of vinho verde, which is a product from the northwest region of Portugal. The data was collected from May 2004 to February of 2007, and is made up of 1599 red wines and 4898 white wines for a total of 6493 observations \citep{cortez2009using}. For each of the wines in the dataset, 11 physiochemical variables were taken on it: fxed acidity, volatile acidity, citric acid, residual sugar, chlorides, free sulfur dioxide, total sulfur dioxide, density, pH, sulphates, and alcohol. Additionally, in our paper, we classified the combined red and white wine data sets, so included was a 12th predictor variable categorizing the given observation as red or white wine. Our response was a quality rating based on a sensory test carried out by at least three sommeliers, where a 0 was considered very bad and a 10 was excellent \cite{gupta2018selection}. Following \cite{hu2016classification}, we separated the wine into three classes: Low Quality $(\le 4)$, Normal (5-7), and High quality $(\ge 8)$. These response values are imbalanced as can be seen in Figure \ref{fig:class-distribution}, with most of the wines having a response of “Normal”. 
 
-```{r data, echo = F}
+```{r data}
 winequality <- read.csv("../data/winequality-all.csv")
 ```
 
@@ -141,11 +140,10 @@ SMOTE, which stands for Synthetic Minority Over-Sampling Technique, is an oversa
 
 ## Classification Methods
 
-We evaluated two classification techniques, which included Random Forest and eXtreme Boosting (XGBoost) methodology, both tree based ensemble methods. Prior investigation of the white wine data showed the Random Forests technique performed well; we wanted to test this method using both white and red wine. Previous papers on the wine data set have also applied different versions of gradient boosting such as adaptive boost; we utilized an alternative gradient boosting technique XGBoost. 
+The two classification methods selected are tree based ensemble methods. **Random Forest information goes here.**
 
-The first classficiation technique utilized the Random Forest algorithm and the associated selection of independent variables for the Random Forest with the randomForest and tuneRF functions. In general, a Random Forest algorithm involves the creation of many classification trees, which are each grown through recursive partioning of independent variable space. During the growth phase for each classification tree, split points of variable space are investigated to maximize the reduction of heterogeneity, which is measured with the Gini impurity index (a reflection of the probability of a variable being wrongly chosen through a stochastic process). Each tree is then grown to a phase where node(s) represent a delineation of data per split point of each variable, and leaves are the terminal points that represenet the final classification of data. After the growth phase, a leaf is potentially pruned back to a node to maximize the tradeoff between complexity and rate of misclassification. A random forest incorporates many trees and subsequently aggregates the predictions made by each tree. We initially selected 500 trees and four variables that could be randomly sampled from to generate a split point at each node. Finally, a stepwise function was created to iteratively conduct the Random Forest algorithm for the purposes of selection of the optimal number of variables to sample from.
+We apply eXtreme Gradient Boosting (XGBoost) using the `xgboost` function with the multiclass classification using the softmax objective function with three classes maximizing the multiclass misclassfication error evaluation metric in the xgboost library \citep{xgboost}. This method combines the tree-based model approach by implementing recursive partitioning and the boosting algorithm which repeatedly optimizes classification methods on the training set. In repeated optimization, a weak classifier is fit on the original data set with each observation having equal weight, the weight is then calculated for the current model based on the error rate and observations are assigned new weights used to fit the next weak classifier. This process is repeated for a final boosted classifier given by the weighted sum of our weak classifiers. XGBoost allows for a variety of evaluation metrics providing a benefit over other boosting methods. Tuning parameters for maximum tree depth, step size shrinkage to prevent overfitting (eta), maximum number of boosting iterations, and number of threads used for parallel computing were selected by conducting a hyperparameter grid search with MCMC [Appendix \ref{app:xgb-tuning}].
 
-We also applied eXtreme Gradient Boosting (XGBoost) using the `xgboost` function with the multiclass classification using the softmax objective function with three classes maximizing the multiclass misclassfication error evaluation metric in the xgboost library \citep{xgboost}. This method combines the tree-based model approach by implementing recursive partitioning and the boosting algorithm which repeatedly optimizes classification methods on the training set. In repeated optimization, a weak classifier is fit on the original data set with each observation having equal weight, the weight is then calculated for the current model based on the error rate and observations are assigned new weights used to fit the next weak classifier. This process is repeated for a final boosted classifier given by the weighted sum of our weak classifiers. XGBoost allows for a variety of evaluation metrics providing a benefit over other boosting methods. Tuning parameters for maximum tree depth, step size shrinkage to prevent overfitting (eta), maximum number of boosting iterations, and number of threads used for parallel computing were selected by conducting a hyperparameter grid search with MCMC [Appendix \ref{app:xgb-tuning}].
 
 # Results 
 
@@ -195,6 +193,21 @@ colnames(xgb_final_mods) <- c("Resampling", "Max Depth", "Eta", "Rounds", "Threa
 xgb_final_mods %>% knitr::kable("latex", digits = 2, escape = F, booktabs = T, linesep = "", align = "c", label = "xbg-final-mods", caption = "Final tuning parameters for XGBoost classifier as determined by the MCMC hyperparameter grid search.")
 ```
 
+```{r rf-final-mod}
+rfMCMC.none.gridsearch <- read_csv("rfMCMC.none.gridsearch.csv")
+rfMCMC.undersample.gridsearch <- read_csv("rfMCMC.undersample.gridsearch.csv")
+rfMCMC.oversample.gridsearch <- read_csv("rfMCMC.oversample.gridsearch.csv")
+rf_final_mods <- rbind(rfMCMC.none.gridsearch[1,],
+                        rfMCMC.undersample.gridsearch[1,],
+                        rfMCMC.oversample.gridsearch[1,]) %>%
+  mutate(label = ifelse(samplingMethod == "none", "No Resampling",
+                        ifelse(samplingMethod == "undersample", paste("Undersampling (n = ", nUndersample, ")", sep = ""),
+                               paste("Oversampling (k = ", kOversample, ")", sep = "")))) %>%
+  select(label, ntree, mtry)
+colnames(rf_final_mods) <- c("Resampling", "N. Trees", "Mtry") 
+rf_final_mods %>% knitr::kable("latex", digits = 2, escape = F, booktabs = T, linesep = "", align = "c", label = "rf-final-mods", caption = "Final tuning parameters for Random Forest classifier as determined by the MCMC hyperparameter grid search.")
+```
+
 ```{r accuracy-results, fig.height = 6, fig.cap = "MCMC accuracy results for each classifier applied to each resampling technique."}
 
 # read in data
@@ -232,7 +245,7 @@ MCMC.results.plot
 # Supplementary Material {-}
 
 + **Data:** Data used was from the [UCI Data Repository](https://archive.ics.uci.edu/ml/datasets/Wine+Quality) \citep{UCIdataset}.
-+ **Code:** Access the final analysis code on [GitHub](https://github.com/earobinson95/Statistical-Learning-Project-UNL-STAT983/blob/main/reports/final-classification.R) or in Appendix \ref{app:code}.
++ **Code:** Access the final analysis code on [GitHub](https://github.com/earobinson95/Statistical-Learning-Project-UNL-STAT983/blob/main/reports/final-classification.R).
 
 # Course Reflection {-}
 
@@ -245,12 +258,14 @@ MCMC.results.plot
 + Overall really enjoyed the course!
 
 ```{r, include = F}
+# devtools::install_github("crsh/papaja") Alison - I'm commenting this all out for now
 library(papaja)
 render_appendix(
 "appendix.Rmd",
 bibliography = rmarkdown::metadata$bibliography,
 csl = rmarkdown::metadata$csl,
-quiet = FALSE
+quiet = TRUE
 )
 ```
+
 
