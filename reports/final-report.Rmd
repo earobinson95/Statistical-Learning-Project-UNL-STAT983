@@ -82,7 +82,7 @@ The goal of this paper, following \cite{hu2016classification} is to train a mode
 In this paper, we applied classification and resampling techniques to the “Wine Quality Data Set” found on the UCI Data Repository \citep{UCIdataset}. 
 The data consist of information from samples of Vinho Verde, which is a product from the northwest region of Portugal. 
 The data was collected from May, 2004 to February, 2007, and is made up of 1599 red wines and 4898 white wines for a total of 6493 observations \citep{cortez2009using}. 
-For each of the wines in the dataset, 11 physiochemical variables were taken on it: fxed acidity, volatile acidity, citric acid, residual sugar, chlorides, free sulfur dioxide, total sulfur dioxide, density, pH, sulphates, and alcohol. 
+For each of the wines in the dataset, 11 physiochemical measurements were taken on it: fxed acidity, volatile acidity, citric acid, residual sugar, chlorides, free sulfur dioxide, total sulfur dioxide, density, pH, sulphates, and alcohol. 
 Additionally, we classified the combined red and white wine data sets, and included an additional predictor variable categorizing the given observation as red or white wine. 
 The response was measured as a quality rating based on a sensory test carried out by at least three sommeliers, where a 0 was considered very bad and a 10 was excellent \cite{gupta2018selection}. 
 Following \cite{hu2016classification}, we separated the wine into three quality classes: Low Quality $(\le 4)$, Normal (5-7), and High quality $(\ge 8)$. 
@@ -237,8 +237,8 @@ Both classification methods were tuned by conducting a hyperparameter grid searc
 
 ## Resampling Techniques
 
-Before we are able to consider the different classification methods, the imbalanced issue in our data must be examined. 
-This is because typical classifier algorithms assume a relatively balanced distribution, so with imbalanced data they tend to be biased towards the majority class \citep{sun2009classification}. 
+Before we are able to consider the different classification methods, we must first examine the imbalanced issue in our data and develop our resampling techniques. 
+This is because typical classifier algorithms assume a relatively balanced distribution, so with imbalanced data there tends to be bias towards the majority class \citep{sun2009classification}. 
 Classification rules for the minority classes tend to be undiscovered or ignored, so the minority class is misclassified more often than the majority class. 
 If we were to look at our data set from a binary standpoint where “Low Quality” and “High Quality” were classified as "rare", and “Normal Quality” was classified as "not rare", the majority (not rare) class has 6053 observations, and the minority (rare) class has 444 observations, which is a ratio of about 13:1. 
 Due to this imbalanced nature in the data, classifying algorithms will be biased towards classifying wines as Normal Quality, causing poor predictions for the Low and High Quality classes. 
