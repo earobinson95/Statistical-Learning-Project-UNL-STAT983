@@ -386,17 +386,8 @@ MCMC.results.plot
 
 # Course Reflection {-}
 
-**Discuss overall course lessons in this section. Beginning a bulleted list of possible discussion topics.**
+We have learned multiple lessons from this course and this project! From the paper specificially, we made a point of using this opportunity to learn some new technical skills on top of methods. For example, we were able to utilize some collaboration tools, like GitHub, to make working on the project as a group more seamless. Additionally, through this project and the homeworks, we were able to improve our R coding skills, especially with R Markdown. Futhermore, the project also reiterated the importance of cross validation and the tuning of the models, as we saw increase in our performance when we spent some time working on the finding the best tuning parameters. Having an proposal due weeks before the final project due date was also helpul in pacing us through this project, as time management is an important skill. As for the course, we really appciated how well preparted you were for each lecture and that we recieved timely feedback (like going through some of the theory homework questions in class). We also like how all of the material of the course felt accessibles, which made it easy to follow along and learn. This also helped with the desire to learn, as the methods were described in an understandable way. We also liked how there was a heavy emphasis on the importance of interpretation and communication, as the use of complex methods is of no use if readers are not able to understand it. This practice with communication will help in future careers. The only suggestion we had was to potentially spend some more time on coding in class, however the homework as very helpful with this aspect. Overall we really enjoyed the course and have learned many valuable things from it!  
 
-+ Importance of cross validation.
-+ Interpretation and communication is key!
-+ Overall great job describing the methods in an understandable way, maybe a little more coding done in class? The homework was helpful for this!
-+ Instructor was well prepared for class and provided timely feedback (actual review of homework).
-+ Overall really enjoyed the course!
-+ All the material of the course felt accessible, made it easy to learn the materials, and made us want to learn.
-+ Improvement of R coding skills (R markdown).
-+ Collaboration tools (i.e. GitHub).
-+ Time management of writing a paper!
 
 ```{r, include = F}
 # devtools::install_github("crsh/papaja") 

@@ -6,499 +6,533 @@
 \clearpage
 \appendix
 
-\hypertarget{classification-tuning}{%
 \section{\texorpdfstring{Classification Tuning
-\label{app:tuning}}{Classification Tuning }}\label{classification-tuning}}
+\label{app:tuning}}{Classification Tuning }}\label{classification-tuning}
 
-\hypertarget{xgboost}{%
 \subsection{\texorpdfstring{XGBoost
-\label{app:xgb-tuning}}{XGBoost }}\label{xgboost}}
+\label{app:xgb-tuning}}{XGBoost }}\label{xgboost}
 
 \begin{center}\includegraphics{final-report_files/figure-latex/xgb-tuning-1} \end{center}
 
-\hypertarget{random-forest}{%
 \subsection{\texorpdfstring{Random Forest
-\label{app:rf-tuning}}{Random Forest }}\label{random-forest}}
+\label{app:rf-tuning}}{Random Forest }}\label{random-forest}
 
 \begin{center}\includegraphics{final-report_files/figure-latex/rf-tuning-1} \end{center}
 
-\hypertarget{code}{%
-\section{\texorpdfstring{Code \label{app:code}}{Code }}\label{code}}
+\section{\texorpdfstring{Code \label{app:code}}{Code }}\label{code}
 
 \begin{Shaded}
 \begin{Highlighting}[]
-\CommentTok{\# LOAD LIBRARIES}
-\CommentTok{\# {-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}}
-\FunctionTok{library}\NormalTok{(tidyverse)}
-\FunctionTok{library}\NormalTok{(readr)}
-\FunctionTok{library}\NormalTok{(xgboost)}
-\FunctionTok{library}\NormalTok{(Matrix)}
-\FunctionTok{library}\NormalTok{(tictoc)}
-\FunctionTok{library}\NormalTok{(furrr)}
-\FunctionTok{library}\NormalTok{(smotefamily)}
-\CommentTok{\# IMPORT DATA, RELEVEL FACTOR COLUMNS}
-\CommentTok{\# {-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}}
-\NormalTok{winequality }\OtherTok{\textless{}{-}} \FunctionTok{read\_csv}\NormalTok{(}\StringTok{"data/winequality{-}all.csv"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{mutate}\NormalTok{(}\AttributeTok{type =} \FunctionTok{factor}\NormalTok{(type, }
-    \AttributeTok{levels =} \FunctionTok{c}\NormalTok{(}\StringTok{"red"}\NormalTok{, }\StringTok{"white"}\NormalTok{)), }\AttributeTok{type01 =} \FunctionTok{as.numeric}\NormalTok{(}\FunctionTok{ifelse}\NormalTok{(type }\SpecialCharTok{==} 
-    \StringTok{"white"}\NormalTok{, }\DecValTok{0}\NormalTok{, }\DecValTok{1}\NormalTok{)), }\AttributeTok{qualityclass =} \FunctionTok{factor}\NormalTok{(qualityclass, }\AttributeTok{levels =} \FunctionTok{c}\NormalTok{(}\StringTok{"Low"}\NormalTok{, }
-    \StringTok{"Normal"}\NormalTok{, }\StringTok{"High"}\NormalTok{)), }\AttributeTok{under\_class =} \FunctionTok{ifelse}\NormalTok{(qualityclass }\SpecialCharTok{==} 
-    \StringTok{"Normal"}\NormalTok{, }\DecValTok{0}\NormalTok{, }\DecValTok{1}\NormalTok{), }\AttributeTok{over\_class =} \FunctionTok{ifelse}\NormalTok{(qualityclass }\SpecialCharTok{==} \StringTok{"Low"}\NormalTok{, }
-    \DecValTok{0}\NormalTok{, }\FunctionTok{ifelse}\NormalTok{(qualityclass }\SpecialCharTok{==} \StringTok{"Normal"}\NormalTok{, }\DecValTok{1}\NormalTok{, }\DecValTok{2}\NormalTok{)))}
-\FunctionTok{colnames}\NormalTok{(winequality) }\OtherTok{\textless{}{-}} \FunctionTok{make.names}\NormalTok{(}\FunctionTok{names}\NormalTok{(winequality), }\AttributeTok{unique =} \ConstantTok{TRUE}\NormalTok{)}
-\FunctionTok{summary}\NormalTok{(winequality)}
-\CommentTok{\# RESAMPLING FUNCTIONS}
-\CommentTok{\# {-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}}
-\CommentTok{\# FUNCTION FOR UNDERSAMPLING}
-\NormalTok{undersample }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(train\_df, nsample) \{}
-\NormalTok{    df\_wine\_0\_ind }\OtherTok{\textless{}{-}} \FunctionTok{which}\NormalTok{(train\_df}\SpecialCharTok{$}\NormalTok{under\_class }\SpecialCharTok{==} \DecValTok{0}\NormalTok{)}
-\NormalTok{    df\_wine\_1\_ind }\OtherTok{\textless{}{-}} \FunctionTok{which}\NormalTok{(train\_df}\SpecialCharTok{$}\NormalTok{under\_class }\SpecialCharTok{==} \DecValTok{1}\NormalTok{)}
-\NormalTok{    pick\_0 }\OtherTok{\textless{}{-}} \FunctionTok{sample}\NormalTok{(df\_wine\_0\_ind, nsample)}
-\NormalTok{    undersample\_wine }\OtherTok{\textless{}{-}}\NormalTok{ train\_df[}\FunctionTok{c}\NormalTok{(df\_wine\_1\_ind, pick\_0), ]  }\CommentTok{\#Final Data frame}
-\NormalTok{    undersample\_wine }\OtherTok{\textless{}{-}}\NormalTok{ undersample\_wine }\SpecialCharTok{\%\textgreater{}\%}\NormalTok{ dplyr}\SpecialCharTok{::}\FunctionTok{select}\NormalTok{(qualityclass, }
-\NormalTok{        type, fixed.acidity, volatile.acidity, citric.acid, residual.sugar, }
-\NormalTok{        chlorides, free.sulfur.dioxide, total.sulfur.dioxide, }
-\NormalTok{        density, pH, sulphates, alcohol)}
-    \CommentTok{\# table(undersample\_wine$under\_class) \# have just to make}
-    \CommentTok{\# sure it\textquotesingle{}s all balancing out how I think}
-    \FunctionTok{return}\NormalTok{(undersample\_wine)}
+\CommentTok{# LOAD LIBRARIES -----------------------------------------------------------}
+\KeywordTok{library}\NormalTok{(tidyverse)}
+\KeywordTok{library}\NormalTok{(readr)}
+\KeywordTok{library}\NormalTok{(xgboost)}
+\KeywordTok{library}\NormalTok{(Matrix)}
+\KeywordTok{library}\NormalTok{(tictoc) }
+\KeywordTok{library}\NormalTok{(furrr)}
+\KeywordTok{library}\NormalTok{(smotefamily)}
+\CommentTok{# IMPORT DATA, RELEVEL FACTOR COLUMNS --------------------------------------- }
+\NormalTok{winequality <-}\StringTok{ }\KeywordTok{read_csv}\NormalTok{(}\StringTok{"data/winequality-all.csv"}\NormalTok{) }\OperatorTok{%>%}
+\StringTok{  }\KeywordTok{mutate}\NormalTok{(}\DataTypeTok{type =} \KeywordTok{factor}\NormalTok{(type, }\DataTypeTok{levels =} \KeywordTok{c}\NormalTok{(}\StringTok{"red"}\NormalTok{, }\StringTok{"white"}\NormalTok{)),}
+         \DataTypeTok{type01 =} \KeywordTok{as.numeric}\NormalTok{(}\KeywordTok{ifelse}\NormalTok{(type }\OperatorTok{==}\StringTok{ "white"}\NormalTok{, }\DecValTok{0}\NormalTok{, }\DecValTok{1}\NormalTok{)),}
+         \DataTypeTok{qualityclass =} \KeywordTok{factor}\NormalTok{(qualityclass, }\DataTypeTok{levels =} \KeywordTok{c}\NormalTok{(}\StringTok{"Low"}\NormalTok{, }\StringTok{"Normal"}\NormalTok{, }\StringTok{"High"}\NormalTok{)),}
+         \DataTypeTok{under_class =} \KeywordTok{ifelse}\NormalTok{(qualityclass }\OperatorTok{==}\StringTok{ "Normal"}\NormalTok{, }\DecValTok{0}\NormalTok{, }\DecValTok{1}\NormalTok{),}
+         \DataTypeTok{over_class =} \KeywordTok{ifelse}\NormalTok{(qualityclass }\OperatorTok{==}\StringTok{ "Low"}\NormalTok{, }\DecValTok{0}\NormalTok{, }
+                             \KeywordTok{ifelse}\NormalTok{(qualityclass }\OperatorTok{==}\StringTok{ "Normal"}\NormalTok{, }\DecValTok{1}\NormalTok{, }\DecValTok{2}\NormalTok{)))}
+\KeywordTok{colnames}\NormalTok{(winequality) <-}\StringTok{ }\KeywordTok{make.names}\NormalTok{(}\KeywordTok{names}\NormalTok{(winequality), }\DataTypeTok{unique=}\OtherTok{TRUE}\NormalTok{)}
+\KeywordTok{summary}\NormalTok{(winequality)}
+\CommentTok{# RESAMPLING FUNCTIONS -----------------------------------------------------}
+\CommentTok{# FUNCTION FOR UNDERSAMPLING}
+\NormalTok{undersample <-}\StringTok{ }\ControlFlowTok{function}\NormalTok{(train_df, nsample)\{}
+\NormalTok{  df_wine_0_ind <-}\StringTok{ }\KeywordTok{which}\NormalTok{(train_df}\OperatorTok{$}\NormalTok{under_class }\OperatorTok{==}\StringTok{ }\DecValTok{0}\NormalTok{)}
+\NormalTok{  df_wine_1_ind <-}\StringTok{ }\KeywordTok{which}\NormalTok{(train_df}\OperatorTok{$}\NormalTok{under_class }\OperatorTok{==}\StringTok{ }\DecValTok{1}\NormalTok{)}
+\NormalTok{  pick_}\DecValTok{0}\NormalTok{ <-}\StringTok{ }\KeywordTok{sample}\NormalTok{(df_wine_0_ind, nsample)}
+\NormalTok{  undersample_wine <-}\StringTok{ }\NormalTok{train_df[}\KeywordTok{c}\NormalTok{(df_wine_1_ind,pick_}\DecValTok{0}\NormalTok{),] }\CommentTok{#Final Data frame}
+\NormalTok{  undersample_wine <-}\StringTok{ }\NormalTok{undersample_wine }\OperatorTok{%>%}
+\StringTok{    }\NormalTok{dplyr}\OperatorTok{::}\KeywordTok{select}\NormalTok{(qualityclass, type, fixed.acidity, volatile.acidity, citric.acid,}
+\NormalTok{                  residual.sugar, chlorides, free.sulfur.dioxide, total.sulfur.dioxide,}
+\NormalTok{                  density, pH, sulphates, alcohol)}
+  \CommentTok{# table(undersample_wine$under_class) # have just to make sure it's all balancing out how I think}
+  \KeywordTok{return}\NormalTok{(undersample_wine)}
 \NormalTok{\}}
-\CommentTok{\# FUNCTION FOR OVERSAMPLING}
-\NormalTok{oversample }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(train\_df, k) \{}
-    
-\NormalTok{    winequality\_low }\OtherTok{\textless{}{-}} \FunctionTok{filter}\NormalTok{(winequality, qualityclass }\SpecialCharTok{\%in\%} 
-        \FunctionTok{c}\NormalTok{(}\StringTok{"Low"}\NormalTok{))}
-\NormalTok{    winequality\_normal }\OtherTok{\textless{}{-}} \FunctionTok{filter}\NormalTok{(winequality, qualityclass }\SpecialCharTok{\%in\%} 
-        \FunctionTok{c}\NormalTok{(}\StringTok{"Normal"}\NormalTok{))}
-\NormalTok{    winequality\_high }\OtherTok{\textless{}{-}} \FunctionTok{filter}\NormalTok{(winequality, qualityclass }\SpecialCharTok{\%in\%} 
-        \FunctionTok{c}\NormalTok{(}\StringTok{"High"}\NormalTok{))}
-    
-\NormalTok{    wine }\OtherTok{\textless{}{-}} \FunctionTok{sort}\NormalTok{(}\FunctionTok{sample}\NormalTok{(}\FunctionTok{nrow}\NormalTok{(winequality\_normal), }\FunctionTok{nrow}\NormalTok{(winequality\_normal) }\SpecialCharTok{*} 
-        \FloatTok{0.5}\NormalTok{))}
-\NormalTok{    winequality\_norm1 }\OtherTok{\textless{}{-}}\NormalTok{ winequality\_normal[wine, ]}
-\NormalTok{    winequality\_norm2 }\OtherTok{\textless{}{-}}\NormalTok{ winequality\_normal[}\SpecialCharTok{{-}}\NormalTok{wine, ]}
-    
-\NormalTok{    wine\_LN }\OtherTok{\textless{}{-}} \FunctionTok{rbind}\NormalTok{(winequality\_low, winequality\_norm1)}
-\NormalTok{    wine\_HN }\OtherTok{\textless{}{-}} \FunctionTok{rbind}\NormalTok{(winequality\_high, winequality\_norm2)}
-\NormalTok{    SMOTEData1 }\OtherTok{\textless{}{-}} \FunctionTok{SMOTE}\NormalTok{(wine\_LN[, }\FunctionTok{c}\NormalTok{(}\StringTok{"fixed.acidity"}\NormalTok{, }\StringTok{"volatile.acidity"}\NormalTok{, }
-        \StringTok{"citric.acid"}\NormalTok{, }\StringTok{"residual.sugar"}\NormalTok{, }\StringTok{"chlorides"}\NormalTok{, }\StringTok{"free.sulfur.dioxide"}\NormalTok{, }
-        \StringTok{"total.sulfur.dioxide"}\NormalTok{, }\StringTok{"density"}\NormalTok{, }\StringTok{"pH"}\NormalTok{, }\StringTok{"sulphates"}\NormalTok{, }
-        \StringTok{"alcohol"}\NormalTok{, }\StringTok{"type01"}\NormalTok{)], wine\_LN[, }\StringTok{"over\_class"}\NormalTok{], }\AttributeTok{K =}\NormalTok{ k, }
-        \AttributeTok{dup\_size =} \DecValTok{0}\NormalTok{)}
-\NormalTok{    SMOTEData2 }\OtherTok{\textless{}{-}} \FunctionTok{SMOTE}\NormalTok{(wine\_HN[, }\FunctionTok{c}\NormalTok{(}\StringTok{"fixed.acidity"}\NormalTok{, }\StringTok{"volatile.acidity"}\NormalTok{, }
-        \StringTok{"citric.acid"}\NormalTok{, }\StringTok{"residual.sugar"}\NormalTok{, }\StringTok{"chlorides"}\NormalTok{, }\StringTok{"free.sulfur.dioxide"}\NormalTok{, }
-        \StringTok{"total.sulfur.dioxide"}\NormalTok{, }\StringTok{"density"}\NormalTok{, }\StringTok{"pH"}\NormalTok{, }\StringTok{"sulphates"}\NormalTok{, }
-        \StringTok{"alcohol"}\NormalTok{, }\StringTok{"type01"}\NormalTok{)], wine\_HN[, }\StringTok{"over\_class"}\NormalTok{], }\AttributeTok{K =}\NormalTok{ k, }
-        \AttributeTok{dup\_size =} \DecValTok{0}\NormalTok{)}
-\NormalTok{    oversample\_df1 }\OtherTok{\textless{}{-}}\NormalTok{ SMOTEData1}\SpecialCharTok{$}\NormalTok{data  }\CommentTok{\#Final data frame}
-\NormalTok{    oversample\_df2 }\OtherTok{\textless{}{-}}\NormalTok{ SMOTEData2}\SpecialCharTok{$}\NormalTok{data  }\CommentTok{\#Final data frame}
-\NormalTok{    oversample\_df }\OtherTok{\textless{}{-}} \FunctionTok{rbind}\NormalTok{(oversample\_df1, oversample\_df2) }\SpecialCharTok{\%\textgreater{}\%} 
-        \FunctionTok{mutate}\NormalTok{(}\AttributeTok{type01 =} \FunctionTok{round}\NormalTok{(type01)) }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{mutate}\NormalTok{(}\AttributeTok{type =} \FunctionTok{as.factor}\NormalTok{(}\FunctionTok{ifelse}\NormalTok{(type01 }\SpecialCharTok{==} 
-        \DecValTok{0}\NormalTok{, }\StringTok{"white"}\NormalTok{, }\StringTok{"red"}\NormalTok{)), }\AttributeTok{qualityclass =} \FunctionTok{ifelse}\NormalTok{(class }\SpecialCharTok{==} \DecValTok{0}\NormalTok{, }
-        \StringTok{"Low"}\NormalTok{, }\FunctionTok{ifelse}\NormalTok{(class }\SpecialCharTok{==} \StringTok{"1"}\NormalTok{, }\StringTok{"Normal"}\NormalTok{, }\StringTok{"High"}\NormalTok{))) }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{mutate}\NormalTok{(}\AttributeTok{qualityclass =} \FunctionTok{factor}\NormalTok{(qualityclass, }
-        \AttributeTok{levels =} \FunctionTok{c}\NormalTok{(}\StringTok{"Low"}\NormalTok{, }\StringTok{"Normal"}\NormalTok{, }\StringTok{"High"}\NormalTok{))) }\SpecialCharTok{\%\textgreater{}\%}\NormalTok{ dplyr}\SpecialCharTok{::}\FunctionTok{select}\NormalTok{(qualityclass, }
-\NormalTok{        type, fixed.acidity, volatile.acidity, citric.acid, residual.sugar, }
-\NormalTok{        chlorides, free.sulfur.dioxide, total.sulfur.dioxide, }
-\NormalTok{        density, pH, sulphates, alcohol)}
-    \CommentTok{\# table(oversample\_df$class) have just to make sure it\textquotesingle{}s all}
-    \CommentTok{\# balancing out how I think}
-    \FunctionTok{return}\NormalTok{(oversample\_df)}
+\CommentTok{# FUNCTION FOR OVERSAMPLING}
+\NormalTok{oversample <-}\StringTok{ }\ControlFlowTok{function}\NormalTok{(train_df, k)\{}
+  
+\NormalTok{  winequality_low <-}\StringTok{ }\KeywordTok{filter}\NormalTok{(winequality, qualityclass }\OperatorTok{%in%}\StringTok{ }\KeywordTok{c}\NormalTok{(}\StringTok{'Low'}\NormalTok{))}
+\NormalTok{  winequality_normal <-}\StringTok{ }\KeywordTok{filter}\NormalTok{(winequality, qualityclass }\OperatorTok{%in%}\StringTok{ }\KeywordTok{c}\NormalTok{(}\StringTok{'Normal'}\NormalTok{))}
+\NormalTok{  winequality_high <-}\StringTok{ }\KeywordTok{filter}\NormalTok{(winequality, qualityclass }\OperatorTok{%in%}\StringTok{ }\KeywordTok{c}\NormalTok{(}\StringTok{'High'}\NormalTok{))}
+  
+\NormalTok{  wine <-}\StringTok{ }\KeywordTok{sort}\NormalTok{(}\KeywordTok{sample}\NormalTok{(}\KeywordTok{nrow}\NormalTok{(winequality_normal), }\KeywordTok{nrow}\NormalTok{(winequality_normal)}\OperatorTok{*}\FloatTok{0.5}\NormalTok{))}
+\NormalTok{  winequality_norm1 <-}\StringTok{ }\NormalTok{winequality_normal[wine,]}
+\NormalTok{  winequality_norm2 <-}\StringTok{ }\NormalTok{winequality_normal[}\OperatorTok{-}\NormalTok{wine,]}
+  
+\NormalTok{  wine_LN <-}\StringTok{ }\KeywordTok{rbind}\NormalTok{(winequality_low,winequality_norm1)}
+\NormalTok{  wine_HN <-}\StringTok{ }\KeywordTok{rbind}\NormalTok{(winequality_high,winequality_norm2)}
+\NormalTok{  SMOTEData1 <-}\StringTok{ }\KeywordTok{SMOTE}\NormalTok{(wine_LN[,}\KeywordTok{c}\NormalTok{(}\StringTok{"fixed.acidity"}\NormalTok{, }\StringTok{"volatile.acidity"}\NormalTok{, }\StringTok{"citric.acid"}\NormalTok{,}
+                                 \StringTok{"residual.sugar"}\NormalTok{, }\StringTok{"chlorides"}\NormalTok{, }\StringTok{"free.sulfur.dioxide"}\NormalTok{,}
+                                 \StringTok{"total.sulfur.dioxide"}\NormalTok{, }\StringTok{"density"}\NormalTok{, }\StringTok{"pH"}\NormalTok{, }\StringTok{"sulphates"}\NormalTok{, }\StringTok{"alcohol"}\NormalTok{,}
+                                 \StringTok{"type01"}\NormalTok{)], wine_LN[,}\StringTok{"over_class"}\NormalTok{], }\DataTypeTok{K =}\NormalTok{ k, }\DataTypeTok{dup_size =} \DecValTok{0}\NormalTok{)}
+\NormalTok{  SMOTEData2 <-}\StringTok{ }\KeywordTok{SMOTE}\NormalTok{(wine_HN[,}\KeywordTok{c}\NormalTok{(}\StringTok{"fixed.acidity"}\NormalTok{, }\StringTok{"volatile.acidity"}\NormalTok{, }\StringTok{"citric.acid"}\NormalTok{,}
+                                 \StringTok{"residual.sugar"}\NormalTok{, }\StringTok{"chlorides"}\NormalTok{, }\StringTok{"free.sulfur.dioxide"}\NormalTok{,}
+                                 \StringTok{"total.sulfur.dioxide"}\NormalTok{, }\StringTok{"density"}\NormalTok{, }\StringTok{"pH"}\NormalTok{, }\StringTok{"sulphates"}\NormalTok{, }\StringTok{"alcohol"}\NormalTok{,}
+                                 \StringTok{"type01"}\NormalTok{)], wine_HN[,}\StringTok{"over_class"}\NormalTok{], }\DataTypeTok{K =}\NormalTok{ k, }\DataTypeTok{dup_size =} \DecValTok{0}\NormalTok{)}
+\NormalTok{  oversample_df1 <-}\StringTok{ }\NormalTok{SMOTEData1}\OperatorTok{$}\NormalTok{data }\CommentTok{#Final data frame}
+\NormalTok{  oversample_df2 <-}\StringTok{ }\NormalTok{SMOTEData2}\OperatorTok{$}\NormalTok{data }\CommentTok{#Final data frame}
+\NormalTok{  oversample_df <-}\StringTok{ }\KeywordTok{rbind}\NormalTok{(oversample_df1,oversample_df2) }\OperatorTok{%>%}
+\StringTok{    }\KeywordTok{mutate}\NormalTok{(}\DataTypeTok{type01 =} \KeywordTok{round}\NormalTok{(type01)) }\OperatorTok{%>%}
+\StringTok{    }\KeywordTok{mutate}\NormalTok{(}\DataTypeTok{type =} \KeywordTok{as.factor}\NormalTok{(}\KeywordTok{ifelse}\NormalTok{(type01 }\OperatorTok{==}\StringTok{ }\DecValTok{0}\NormalTok{, }\StringTok{"white"}\NormalTok{,}\StringTok{"red"}\NormalTok{)),}
+           \DataTypeTok{qualityclass =} \KeywordTok{ifelse}\NormalTok{(class }\OperatorTok{==}\StringTok{ }\DecValTok{0}\NormalTok{, }\StringTok{"Low"}\NormalTok{, }
+                                 \KeywordTok{ifelse}\NormalTok{(class }\OperatorTok{==}\StringTok{ "1"}\NormalTok{, }\StringTok{"Normal"}\NormalTok{,}\StringTok{"High"}\NormalTok{))) }\OperatorTok{%>%}
+\StringTok{    }\KeywordTok{mutate}\NormalTok{(}\DataTypeTok{qualityclass =} \KeywordTok{factor}\NormalTok{(qualityclass, }\DataTypeTok{levels =} \KeywordTok{c}\NormalTok{(}\StringTok{"Low"}\NormalTok{, }\StringTok{"Normal"}\NormalTok{, }\StringTok{"High"}\NormalTok{))) }\OperatorTok{%>%}
+\StringTok{    }\NormalTok{dplyr}\OperatorTok{::}\KeywordTok{select}\NormalTok{(qualityclass, type, fixed.acidity, volatile.acidity, citric.acid,}
+\NormalTok{                  residual.sugar, chlorides, free.sulfur.dioxide, total.sulfur.dioxide,}
+\NormalTok{                  density, pH, sulphates, alcohol)}
+  \CommentTok{#table(oversample_df$class) have just to make sure it's all balancing out how I think }
+  \KeywordTok{return}\NormalTok{(oversample_df)}
 \NormalTok{\}}
-\CommentTok{\# XGBOOST FUNCTIONS}
-\CommentTok{\# {-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}}
-\CommentTok{\# SET UP FUNCTION TO EVALUATE XGBOOST}
-\NormalTok{xgbFunc }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(}\AttributeTok{df =}\NormalTok{ winequality, }\AttributeTok{samplingMethod =} \StringTok{"none"}\NormalTok{, }
-    \AttributeTok{nUndersample =} \DecValTok{2000}\NormalTok{, }\AttributeTok{kOversample =} \DecValTok{5}\NormalTok{, }\AttributeTok{trainPct =} \FloatTok{0.7}\NormalTok{, max.depth, }
-\NormalTok{    eta, }\AttributeTok{nround =} \DecValTok{2}\NormalTok{, }\AttributeTok{nthread =} \DecValTok{2}\NormalTok{, }\AttributeTok{show.table =}\NormalTok{ F) \{}
+\CommentTok{# XGBOOST FUNCTIONS -----------------------------------------------------------------}
+\CommentTok{# SET UP FUNCTION TO EVALUATE XGBOOST}
+\NormalTok{xgbFunc <-}\StringTok{ }
+\StringTok{  }\ControlFlowTok{function}\NormalTok{(}\DataTypeTok{df =}\NormalTok{ winequality, }\DataTypeTok{samplingMethod =} \StringTok{"none"}\NormalTok{, }\DataTypeTok{nUndersample =} \DecValTok{2000}\NormalTok{, }\DataTypeTok{kOversample =} \DecValTok{5}\NormalTok{,}
+           \DataTypeTok{trainPct =} \FloatTok{0.7}\NormalTok{, max.depth, eta, }\DataTypeTok{nround =} \DecValTok{2}\NormalTok{, }\DataTypeTok{nthread =} \DecValTok{2}\NormalTok{, }\DataTypeTok{show.table =}\NormalTok{ F)\{}
     
-    \FunctionTok{require}\NormalTok{(Matrix)}
-    \FunctionTok{require}\NormalTok{(xgboost)}
+    \KeywordTok{require}\NormalTok{(Matrix)}
+    \KeywordTok{require}\NormalTok{(xgboost)}
     
-    \CommentTok{\# set up training/testing sets}
-\NormalTok{    n }\OtherTok{\textless{}{-}} \FunctionTok{nrow}\NormalTok{(df)}
-\NormalTok{    train.index }\OtherTok{\textless{}{-}} \FunctionTok{sample}\NormalTok{(}\FunctionTok{seq}\NormalTok{(}\DecValTok{1}\NormalTok{, n), }\FunctionTok{floor}\NormalTok{(n }\SpecialCharTok{*}\NormalTok{ trainPct), }\AttributeTok{replace =}\NormalTok{ F)}
+    \CommentTok{# set up training/testing sets}
+\NormalTok{    n <-}\StringTok{ }\KeywordTok{nrow}\NormalTok{(df)}
+\NormalTok{    train.index <-}\StringTok{ }\KeywordTok{sample}\NormalTok{(}\KeywordTok{seq}\NormalTok{(}\DecValTok{1}\NormalTok{,n), }\KeywordTok{floor}\NormalTok{(n}\OperatorTok{*}\NormalTok{trainPct), }\DataTypeTok{replace =}\NormalTok{ F)}
     
-    \CommentTok{\# create dgCMatrix for modeling}
+    \CommentTok{# create dgCMatrix for modeling}
     
-    \CommentTok{\# training}
-\NormalTok{    train.data }\OtherTok{\textless{}{-}}\NormalTok{ df[train.index, ]  }\CommentTok{\# Normal}
+    \CommentTok{# training}
+\NormalTok{    train.data <-}\StringTok{  }\NormalTok{df[train.index,] }\CommentTok{# Normal}
     
-    \ControlFlowTok{if}\NormalTok{ (samplingMethod }\SpecialCharTok{==} \StringTok{"undersample"}\NormalTok{) \{}
-\NormalTok{        train.data }\OtherTok{\textless{}{-}} \FunctionTok{undersample}\NormalTok{(train.data, nUndersample)  }\CommentTok{\# Undersample}
+    \ControlFlowTok{if}\NormalTok{(samplingMethod }\OperatorTok{==}\StringTok{ "undersample"}\NormalTok{)\{}
+\NormalTok{      train.data <-}\StringTok{ }\KeywordTok{undersample}\NormalTok{(train.data, nUndersample) }\CommentTok{# Undersample}
 \NormalTok{    \}}
     
-    \ControlFlowTok{if}\NormalTok{ (samplingMethod }\SpecialCharTok{==} \StringTok{"oversample"}\NormalTok{) \{}
-\NormalTok{        train.data }\OtherTok{\textless{}{-}} \FunctionTok{oversample}\NormalTok{(train.data, kOversample)  }\CommentTok{\# Oversample}
+    \ControlFlowTok{if}\NormalTok{(samplingMethod }\OperatorTok{==}\StringTok{ "oversample"}\NormalTok{)\{}
+\NormalTok{      train.data <-}\StringTok{ }\KeywordTok{oversample}\NormalTok{(train.data, kOversample) }\CommentTok{# Oversample}
 \NormalTok{    \}}
     
-\NormalTok{    train.data }\OtherTok{\textless{}{-}}\NormalTok{ train.data }\SpecialCharTok{\%\textgreater{}\%}\NormalTok{ dplyr}\SpecialCharTok{::}\FunctionTok{select}\NormalTok{(qualityclass, }
-\NormalTok{        type, fixed.acidity, volatile.acidity, citric.acid, residual.sugar, }
-\NormalTok{        chlorides, free.sulfur.dioxide, total.sulfur.dioxide, }
-\NormalTok{        density, pH, sulphates, alcohol)}
+\NormalTok{    train.data <-}\StringTok{ }\NormalTok{train.data }\OperatorTok{%>%}\StringTok{  }
+\StringTok{      }\NormalTok{dplyr}\OperatorTok{::}\KeywordTok{select}\NormalTok{(qualityclass, type, fixed.acidity, volatile.acidity, citric.acid,}
+\NormalTok{                    residual.sugar, chlorides, free.sulfur.dioxide, total.sulfur.dioxide,}
+\NormalTok{                    density, pH, sulphates, alcohol)}
+ 
+\NormalTok{    train.datamatrix   <-}\StringTok{ }\KeywordTok{sparse.model.matrix}\NormalTok{(qualityclass }\OperatorTok{~}\StringTok{ }\NormalTok{., }\DataTypeTok{data =}\NormalTok{ train.data)[,}\OperatorTok{-}\DecValTok{1}\NormalTok{]}
+\NormalTok{    train.qualityclass <-}\StringTok{ }\NormalTok{train.data}\OperatorTok{$}\NormalTok{qualityclass}
+\NormalTok{    train.label        <-}\StringTok{ }\KeywordTok{as.integer}\NormalTok{(train.data}\OperatorTok{$}\NormalTok{qualityclass)}\OperatorTok{-}\DecValTok{1} \CommentTok{# label conversion}
+\NormalTok{    xgb.train          <-}\StringTok{ }\KeywordTok{list}\NormalTok{(}\DataTypeTok{data =}\NormalTok{ train.datamatrix, }\DataTypeTok{label =}\NormalTok{ train.label)}
     
-\NormalTok{    train.datamatrix }\OtherTok{\textless{}{-}} \FunctionTok{sparse.model.matrix}\NormalTok{(qualityclass }\SpecialCharTok{\textasciitilde{}}\NormalTok{ ., }
-        \AttributeTok{data =}\NormalTok{ train.data)[, }\SpecialCharTok{{-}}\DecValTok{1}\NormalTok{]}
-\NormalTok{    train.qualityclass }\OtherTok{\textless{}{-}}\NormalTok{ train.data}\SpecialCharTok{$}\NormalTok{qualityclass}
-\NormalTok{    train.label }\OtherTok{\textless{}{-}} \FunctionTok{as.integer}\NormalTok{(train.data}\SpecialCharTok{$}\NormalTok{qualityclass) }\SpecialCharTok{{-}} \DecValTok{1}  \CommentTok{\# label conversion}
-\NormalTok{    xgb.train }\OtherTok{\textless{}{-}} \FunctionTok{list}\NormalTok{(}\AttributeTok{data =}\NormalTok{ train.datamatrix, }\AttributeTok{label =}\NormalTok{ train.label)}
-    
-    \CommentTok{\# testing}
-\NormalTok{    test.data }\OtherTok{\textless{}{-}}\NormalTok{ df[}\SpecialCharTok{{-}}\NormalTok{train.index, ] }\SpecialCharTok{\%\textgreater{}\%}\NormalTok{ dplyr}\SpecialCharTok{::}\FunctionTok{select}\NormalTok{(qualityclass, }
-\NormalTok{        type, fixed.acidity, volatile.acidity, citric.acid, residual.sugar, }
-\NormalTok{        chlorides, free.sulfur.dioxide, total.sulfur.dioxide, }
-\NormalTok{        density, pH, sulphates, alcohol)}
-\NormalTok{    test.datamatrix }\OtherTok{\textless{}{-}} \FunctionTok{sparse.model.matrix}\NormalTok{(qualityclass }\SpecialCharTok{\textasciitilde{}}\NormalTok{ ., }
-        \AttributeTok{data =}\NormalTok{ test.data)[, }\SpecialCharTok{{-}}\DecValTok{1}\NormalTok{]}
-\NormalTok{    test.qualityclass }\OtherTok{\textless{}{-}}\NormalTok{ test.data}\SpecialCharTok{$}\NormalTok{qualityclass}
-\NormalTok{    test.label }\OtherTok{\textless{}{-}} \FunctionTok{as.integer}\NormalTok{(test.data}\SpecialCharTok{$}\NormalTok{qualityclass) }\SpecialCharTok{{-}} \DecValTok{1}  \CommentTok{\# label conversion}
-\NormalTok{    xgb.test }\OtherTok{\textless{}{-}} \FunctionTok{list}\NormalTok{(}\AttributeTok{data =}\NormalTok{ test.datamatrix, }\AttributeTok{label =}\NormalTok{ test.label)}
+    \CommentTok{# testing}
+\NormalTok{    test.data         <-}\StringTok{ }\NormalTok{df[}\OperatorTok{-}\NormalTok{train.index,] }\OperatorTok{%>%}\StringTok{     }
+\StringTok{      }\NormalTok{dplyr}\OperatorTok{::}\KeywordTok{select}\NormalTok{(qualityclass, type, fixed.acidity, volatile.acidity, citric.acid,}
+\NormalTok{                    residual.sugar, chlorides, free.sulfur.dioxide, total.sulfur.dioxide,}
+\NormalTok{                    density, pH, sulphates, alcohol)}
+\NormalTok{    test.datamatrix   <-}\StringTok{ }\KeywordTok{sparse.model.matrix}\NormalTok{(qualityclass }\OperatorTok{~}\StringTok{ }\NormalTok{., }\DataTypeTok{data =}\NormalTok{ test.data)[,}\OperatorTok{-}\DecValTok{1}\NormalTok{]}
+\NormalTok{    test.qualityclass <-}\StringTok{ }\NormalTok{test.data}\OperatorTok{$}\NormalTok{qualityclass}
+\NormalTok{    test.label        <-}\StringTok{ }\KeywordTok{as.integer}\NormalTok{(test.data}\OperatorTok{$}\NormalTok{qualityclass)}\OperatorTok{-}\DecValTok{1} \CommentTok{# label conversion}
+\NormalTok{    xgb.test          <-}\StringTok{ }\KeywordTok{list}\NormalTok{(}\DataTypeTok{data =}\NormalTok{ test.datamatrix, }\DataTypeTok{label =}\NormalTok{ test.label)}
     
     
-    \CommentTok{\# fit xgboost model}
-\NormalTok{    xgb.fit }\OtherTok{\textless{}{-}} \FunctionTok{xgboost}\NormalTok{(}\AttributeTok{data =}\NormalTok{ xgb.train}\SpecialCharTok{$}\NormalTok{data, }\AttributeTok{label =}\NormalTok{ xgb.train}\SpecialCharTok{$}\NormalTok{label, }
-        \AttributeTok{booster =} \StringTok{"gbtree"}\NormalTok{, }\AttributeTok{max.depth =}\NormalTok{ max.depth, }\AttributeTok{eta =}\NormalTok{ eta, }
-        \AttributeTok{nround =}\NormalTok{ nround, }\AttributeTok{nthread =}\NormalTok{ nthread, }\AttributeTok{objective =} \StringTok{"multi:softprob"}\NormalTok{, }
-        \AttributeTok{eval\_metric =} \StringTok{"merror"}\NormalTok{, }\AttributeTok{num\_class =} \FunctionTok{length}\NormalTok{(}\FunctionTok{levels}\NormalTok{(train.qualityclass)), }
-        \AttributeTok{verbose =} \DecValTok{0}\NormalTok{)}
+    \CommentTok{# fit xgboost model}
+\NormalTok{    xgb.fit <-}\StringTok{ }\KeywordTok{xgboost}\NormalTok{(}\DataTypeTok{data  =}\NormalTok{ xgb.train}\OperatorTok{$}\NormalTok{data,}
+                       \DataTypeTok{label =}\NormalTok{ xgb.train}\OperatorTok{$}\NormalTok{label,}
+                       \DataTypeTok{booster =}\StringTok{"gbtree"}\NormalTok{,}
+                       \DataTypeTok{max.depth =}\NormalTok{ max.depth,}
+                       \DataTypeTok{eta =}\NormalTok{ eta,}
+                       \DataTypeTok{nround =}\NormalTok{ nround,}
+                       \DataTypeTok{nthread =}\NormalTok{ nthread,}
+                       \DataTypeTok{objective =} \StringTok{"multi:softprob"}\NormalTok{,}
+                       \DataTypeTok{eval_metric =} \StringTok{"merror"}\NormalTok{,}
+                       \DataTypeTok{num_class =} \KeywordTok{length}\NormalTok{(}\KeywordTok{levels}\NormalTok{(train.qualityclass)),}
+                       \DataTypeTok{verbose =} \DecValTok{0}
+\NormalTok{    )}
     
-    \CommentTok{\# predict}
-\NormalTok{    xgb.pred }\OtherTok{=} \FunctionTok{predict}\NormalTok{(xgb.fit, xgb.test}\SpecialCharTok{$}\NormalTok{data, }\AttributeTok{reshape =}\NormalTok{ T) }\SpecialCharTok{\%\textgreater{}\%} 
-        \FunctionTok{as.data.frame}\NormalTok{()}
-    \FunctionTok{colnames}\NormalTok{(xgb.pred) }\OtherTok{=} \FunctionTok{levels}\NormalTok{(train.qualityclass)}
-\NormalTok{    xgb.pred}\SpecialCharTok{$}\NormalTok{prediction }\OtherTok{=} \FunctionTok{apply}\NormalTok{(xgb.pred, }\DecValTok{1}\NormalTok{, }\ControlFlowTok{function}\NormalTok{(x) }\FunctionTok{colnames}\NormalTok{(xgb.pred)[}\FunctionTok{which.max}\NormalTok{(x)])}
-\NormalTok{    xgb.pred}\SpecialCharTok{$}\NormalTok{label }\OtherTok{=} \FunctionTok{levels}\NormalTok{(train.qualityclass)[test.label }\SpecialCharTok{+} 
-        \DecValTok{1}\NormalTok{]}
-\NormalTok{    xgb.pred }\OtherTok{\textless{}{-}}\NormalTok{ xgb.pred }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{mutate}\NormalTok{(}\AttributeTok{prediction =} \FunctionTok{factor}\NormalTok{(prediction, }
-        \AttributeTok{levels =} \FunctionTok{c}\NormalTok{(}\StringTok{"Low"}\NormalTok{, }\StringTok{"Normal"}\NormalTok{, }\StringTok{"High"}\NormalTok{)), }\AttributeTok{label =} \FunctionTok{factor}\NormalTok{(label, }
-        \AttributeTok{levels =} \FunctionTok{c}\NormalTok{(}\StringTok{"Low"}\NormalTok{, }\StringTok{"Normal"}\NormalTok{, }\StringTok{"High"}\NormalTok{)))}
-    \CommentTok{\# evaluated prediction}
-\NormalTok{    accuracy.all }\OtherTok{\textless{}{-}} \FunctionTok{mean}\NormalTok{(xgb.pred}\SpecialCharTok{$}\NormalTok{prediction }\SpecialCharTok{==}\NormalTok{ xgb.pred}\SpecialCharTok{$}\NormalTok{label)}
-\NormalTok{    table }\OtherTok{\textless{}{-}} \FunctionTok{with}\NormalTok{(xgb.pred, }\FunctionTok{table}\NormalTok{(label, prediction))}
-\NormalTok{    prop.table }\OtherTok{\textless{}{-}}\NormalTok{ table}\SpecialCharTok{/}\FunctionTok{rowSums}\NormalTok{(table)}
-\NormalTok{    accuracy.low }\OtherTok{\textless{}{-}}\NormalTok{ prop.table[}\DecValTok{1}\NormalTok{, }\DecValTok{1}\NormalTok{]}
-\NormalTok{    accuracy.normal }\OtherTok{\textless{}{-}}\NormalTok{ prop.table[}\DecValTok{2}\NormalTok{, }\DecValTok{2}\NormalTok{]}
-\NormalTok{    accuracy.high }\OtherTok{\textless{}{-}}\NormalTok{ prop.table[}\DecValTok{3}\NormalTok{, }\DecValTok{3}\NormalTok{]}
-\NormalTok{    accuracy }\OtherTok{\textless{}{-}} \FunctionTok{cbind}\NormalTok{(accuracy.all, accuracy.low, accuracy.normal, }
-\NormalTok{        accuracy.high)}
+    \CommentTok{# predict}
+\NormalTok{    xgb.pred =}\StringTok{ }\KeywordTok{predict}\NormalTok{(xgb.fit, xgb.test}\OperatorTok{$}\NormalTok{data, }\DataTypeTok{reshape =}\NormalTok{ T) }\OperatorTok{%>%}\StringTok{ }\KeywordTok{as.data.frame}\NormalTok{()}
+    \KeywordTok{colnames}\NormalTok{(xgb.pred) =}\StringTok{ }\KeywordTok{levels}\NormalTok{(train.qualityclass)}
+\NormalTok{    xgb.pred}\OperatorTok{$}\NormalTok{prediction =}\StringTok{ }\KeywordTok{apply}\NormalTok{(xgb.pred, }\DecValTok{1}\NormalTok{, }\ControlFlowTok{function}\NormalTok{(x) }\KeywordTok{colnames}\NormalTok{(xgb.pred)[}\KeywordTok{which.max}\NormalTok{(x)])}
+\NormalTok{    xgb.pred}\OperatorTok{$}\NormalTok{label =}\StringTok{ }\KeywordTok{levels}\NormalTok{(train.qualityclass)[test.label }\OperatorTok{+}\StringTok{ }\DecValTok{1}\NormalTok{]}
+\NormalTok{    xgb.pred <-}\StringTok{ }\NormalTok{xgb.pred }\OperatorTok{%>%}
+\StringTok{      }\KeywordTok{mutate}\NormalTok{(}\DataTypeTok{prediction =} \KeywordTok{factor}\NormalTok{(prediction, }\DataTypeTok{levels =} \KeywordTok{c}\NormalTok{(}\StringTok{"Low"}\NormalTok{, }\StringTok{"Normal"}\NormalTok{, }\StringTok{"High"}\NormalTok{)),}
+             \DataTypeTok{label =} \KeywordTok{factor}\NormalTok{(label, }\DataTypeTok{levels =} \KeywordTok{c}\NormalTok{(}\StringTok{"Low"}\NormalTok{, }\StringTok{"Normal"}\NormalTok{, }\StringTok{"High"}\NormalTok{)))}
+    \CommentTok{# evaluated prediction}
+\NormalTok{    accuracy.all  <-}\StringTok{ }\KeywordTok{mean}\NormalTok{(xgb.pred}\OperatorTok{$}\NormalTok{prediction}\OperatorTok{==}\NormalTok{xgb.pred}\OperatorTok{$}\NormalTok{label)}
+\NormalTok{    table    <-}\StringTok{ }\KeywordTok{with}\NormalTok{(xgb.pred, }\KeywordTok{table}\NormalTok{(label, prediction))}
+\NormalTok{    prop.table <-}\StringTok{ }\NormalTok{table}\OperatorTok{/}\KeywordTok{rowSums}\NormalTok{(table)}
+\NormalTok{    accuracy.low    <-}\StringTok{ }\NormalTok{prop.table[}\DecValTok{1}\NormalTok{,}\DecValTok{1}\NormalTok{]}
+\NormalTok{    accuracy.normal <-}\StringTok{ }\NormalTok{prop.table[}\DecValTok{2}\NormalTok{,}\DecValTok{2}\NormalTok{]}
+\NormalTok{    accuracy.high   <-}\StringTok{ }\NormalTok{prop.table[}\DecValTok{3}\NormalTok{,}\DecValTok{3}\NormalTok{]}
+\NormalTok{    accuracy <-}\StringTok{ }\KeywordTok{cbind}\NormalTok{(accuracy.all, accuracy.low, accuracy.normal, accuracy.high)}
     
-    \ControlFlowTok{if}\NormalTok{ (show.table) \{}
-        \FunctionTok{return}\NormalTok{(}\FunctionTok{list}\NormalTok{(}\AttributeTok{accuracy =}\NormalTok{ accuracy, }\AttributeTok{table =}\NormalTok{ table, }\AttributeTok{prop.table =}\NormalTok{ prop.table))}
-\NormalTok{    \} }\ControlFlowTok{else}\NormalTok{ \{}
-        \FunctionTok{return}\NormalTok{(accuracy)}
+    \ControlFlowTok{if}\NormalTok{(show.table)\{}
+      \KeywordTok{return}\NormalTok{(}\KeywordTok{list}\NormalTok{(}\DataTypeTok{accuracy =}\NormalTok{ accuracy, }\DataTypeTok{table =}\NormalTok{ table, }\DataTypeTok{prop.table =}\NormalTok{ prop.table)) }
+\NormalTok{    \} }\ControlFlowTok{else}\NormalTok{\{}
+      \KeywordTok{return}\NormalTok{(accuracy) }
 \NormalTok{    \}}
     
-\NormalTok{\}}
-\CommentTok{\# XGBOOST MCMC FUNCTION WITH PARALLEL COMPUTING}
-\NormalTok{xgbMCMC }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(}\AttributeTok{samplingMethod =} \StringTok{"none"}\NormalTok{, }\AttributeTok{nUndersample =} \DecValTok{2000}\NormalTok{, }
-    \AttributeTok{kOversample =} \DecValTok{5}\NormalTok{, }\AttributeTok{B =} \DecValTok{5}\NormalTok{, }\AttributeTok{trainPct =} \FloatTok{0.7}\NormalTok{, max.depth, eta, }\AttributeTok{nround =} \DecValTok{2}\NormalTok{, }
-    \AttributeTok{nthread =} \DecValTok{2}\NormalTok{) \{}
-    \FunctionTok{require}\NormalTok{(furrr)}
+\NormalTok{  \}}
+\CommentTok{# XGBOOST MCMC FUNCTION WITH PARALLEL COMPUTING}
+\NormalTok{xgbMCMC <-}\StringTok{ }
+\StringTok{  }\ControlFlowTok{function}\NormalTok{(}\DataTypeTok{samplingMethod =} \StringTok{"none"}\NormalTok{, }\DataTypeTok{nUndersample =} \DecValTok{2000}\NormalTok{, }\DataTypeTok{kOversample =} \DecValTok{5}\NormalTok{,}
+           \DataTypeTok{B =} \DecValTok{5}\NormalTok{, }\DataTypeTok{trainPct =} \FloatTok{0.7}\NormalTok{, max.depth, eta, }\DataTypeTok{nround =} \DecValTok{2}\NormalTok{, }\DataTypeTok{nthread =} \DecValTok{2}\NormalTok{)\{}
+    \KeywordTok{require}\NormalTok{(furrr)}
     
-    \CommentTok{\# Create Parameter Grid}
-\NormalTok{    mcmc.grid }\OtherTok{\textless{}{-}} \FunctionTok{expand\_grid}\NormalTok{(}\AttributeTok{B =} \FunctionTok{seq}\NormalTok{(}\DecValTok{1}\NormalTok{, B), }\AttributeTok{samplingMethod =}\NormalTok{ samplingMethod, }
-        \AttributeTok{nUndersample =}\NormalTok{ nUndersample, }\AttributeTok{kOversample =}\NormalTok{ kOversample, }
-        \AttributeTok{trainPct =}\NormalTok{ trainPct, }\AttributeTok{max.depth =}\NormalTok{ max.depth, }\AttributeTok{eta =}\NormalTok{ eta, }
-        \AttributeTok{nround =}\NormalTok{ nround, }\AttributeTok{nthread =}\NormalTok{ nthread)}
+    \CommentTok{# Create Parameter Grid}
+\NormalTok{    mcmc.grid <-}\StringTok{ }\KeywordTok{expand_grid}\NormalTok{(}\DataTypeTok{B =} \KeywordTok{seq}\NormalTok{(}\DecValTok{1}\NormalTok{,B),}
+                             \DataTypeTok{samplingMethod =}\NormalTok{ samplingMethod,}
+                             \DataTypeTok{nUndersample =}\NormalTok{ nUndersample,}
+                             \DataTypeTok{kOversample =}\NormalTok{ kOversample,}
+                             \DataTypeTok{trainPct =}\NormalTok{ trainPct,}
+                             \DataTypeTok{max.depth =}\NormalTok{ max.depth, }
+                             \DataTypeTok{eta =}\NormalTok{ eta,}
+                             \DataTypeTok{nround =}\NormalTok{ nround, }
+                             \DataTypeTok{nthread =}\NormalTok{ nthread)}
     
-    \CommentTok{\# Obtain Accuracy}
-\NormalTok{    accuracyList }\OtherTok{\textless{}{-}}\NormalTok{ furrr}\SpecialCharTok{::}\FunctionTok{future\_pmap}\NormalTok{(mcmc.grid[, }\SpecialCharTok{{-}}\DecValTok{1}\NormalTok{], xgbFunc)}
-\NormalTok{    xgbAccuracy }\OtherTok{\textless{}{-}} \FunctionTok{matrix}\NormalTok{(}\FunctionTok{unlist}\NormalTok{(accuracyList, }\AttributeTok{use.names =} \ConstantTok{TRUE}\NormalTok{), }
-        \AttributeTok{ncol =} \DecValTok{4}\NormalTok{, }\AttributeTok{nrow =} \FunctionTok{nrow}\NormalTok{(mcmc.grid), }\AttributeTok{byrow =}\NormalTok{ T)}
-    \FunctionTok{colnames}\NormalTok{(xgbAccuracy) }\OtherTok{\textless{}{-}} \FunctionTok{colnames}\NormalTok{(accuracyList[[}\DecValTok{1}\NormalTok{]])}
+    \CommentTok{# Obtain Accuracy}
+\NormalTok{    accuracyList <-}\StringTok{ }\NormalTok{furrr}\OperatorTok{::}\KeywordTok{future_pmap}\NormalTok{(mcmc.grid[,}\OperatorTok{-}\DecValTok{1}\NormalTok{], xgbFunc)}
+\NormalTok{    xgbAccuracy <-}\StringTok{ }\KeywordTok{matrix}\NormalTok{(}\KeywordTok{unlist}\NormalTok{(accuracyList, }\DataTypeTok{use.names =} \OtherTok{TRUE}\NormalTok{), }\DataTypeTok{ncol =} \DecValTok{4}\NormalTok{, }\DataTypeTok{nrow =} \KeywordTok{nrow}\NormalTok{(mcmc.grid), }\DataTypeTok{byrow =}\NormalTok{ T)}
+    \KeywordTok{colnames}\NormalTok{(xgbAccuracy) <-}\StringTok{ }\KeywordTok{colnames}\NormalTok{(accuracyList[[}\DecValTok{1}\NormalTok{]])}
     
-    \CommentTok{\# Summarize Accuracy}
-\NormalTok{    results }\OtherTok{\textless{}{-}} \FunctionTok{cbind}\NormalTok{(mcmc.grid, xgbAccuracy) }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{pivot\_longer}\NormalTok{(}\AttributeTok{cols =} \FunctionTok{c}\NormalTok{(}\StringTok{"accuracy.all"}\NormalTok{, }
-        \StringTok{"accuracy.low"}\NormalTok{, }\StringTok{"accuracy.normal"}\NormalTok{, }\StringTok{"accuracy.high"}\NormalTok{), }
-        \AttributeTok{names\_to =} \StringTok{"accuracyGroup"}\NormalTok{, }\AttributeTok{values\_to =} \StringTok{"accuracy"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%} 
-        \FunctionTok{mutate}\NormalTok{(}\AttributeTok{Method =} \StringTok{"XGBoost"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}\NormalTok{ dplyr}\SpecialCharTok{::}\FunctionTok{group\_by}\NormalTok{(Method, }
-\NormalTok{        accuracyGroup, samplingMethod, nUndersample, kOversample, }
-\NormalTok{        max.depth, eta, nround, nthread) }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{summarise}\NormalTok{(}\AttributeTok{B =} \FunctionTok{n}\NormalTok{(), }
-        \AttributeTok{mean =} \FunctionTok{mean}\NormalTok{(accuracy), }\AttributeTok{lower =} \FunctionTok{quantile}\NormalTok{(accuracy, }\AttributeTok{probs =} \FunctionTok{c}\NormalTok{(}\FloatTok{0.05}\NormalTok{)), }
-        \AttributeTok{upper =} \FunctionTok{quantile}\NormalTok{(accuracy, }\AttributeTok{probs =} \FunctionTok{c}\NormalTok{(}\FloatTok{0.95}\NormalTok{))) }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{ungroup}\NormalTok{()}
+    \CommentTok{# Summarize Accuracy}
+\NormalTok{    results <-}\StringTok{ }\KeywordTok{cbind}\NormalTok{(mcmc.grid, xgbAccuracy) }\OperatorTok{%>%}
+\StringTok{      }\KeywordTok{pivot_longer}\NormalTok{(}\DataTypeTok{cols =} \KeywordTok{c}\NormalTok{(}\StringTok{"accuracy.all"}\NormalTok{, }\StringTok{"accuracy.low"}\NormalTok{, }\StringTok{"accuracy.normal"}\NormalTok{, }\StringTok{"accuracy.high"}\NormalTok{),}
+                   \DataTypeTok{names_to =} \StringTok{"accuracyGroup"}\NormalTok{,}
+                   \DataTypeTok{values_to =} \StringTok{"accuracy"}\NormalTok{) }\OperatorTok{%>%}
+\StringTok{      }\KeywordTok{mutate}\NormalTok{(}\DataTypeTok{Method =} \StringTok{"XGBoost"}\NormalTok{) }\OperatorTok{%>%}
+\StringTok{      }\NormalTok{dplyr}\OperatorTok{::}\KeywordTok{group_by}\NormalTok{(Method, accuracyGroup, samplingMethod, nUndersample, kOversample, max.depth, eta, nround, nthread) }\OperatorTok{%>%}
+\StringTok{      }\KeywordTok{summarise}\NormalTok{(}\DataTypeTok{B =} \KeywordTok{n}\NormalTok{(),}
+                \DataTypeTok{mean  =} \KeywordTok{mean}\NormalTok{(accuracy),}
+                \DataTypeTok{lower =} \KeywordTok{quantile}\NormalTok{(accuracy, }\DataTypeTok{probs =} \KeywordTok{c}\NormalTok{(}\FloatTok{0.05}\NormalTok{)),}
+                \DataTypeTok{upper =} \KeywordTok{quantile}\NormalTok{(accuracy, }\DataTypeTok{probs =} \KeywordTok{c}\NormalTok{(}\FloatTok{0.95}\NormalTok{))) }\OperatorTok{%>%}
+\StringTok{      }\KeywordTok{ungroup}\NormalTok{()}
     
-    \FunctionTok{return}\NormalTok{(results)}
+    \KeywordTok{return}\NormalTok{(results)}
     
-\NormalTok{\}}
-\CommentTok{\# RANDOM FOREST FUNCTIONS}
-\CommentTok{\# {-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-} SET UP FUNCTION}
-\CommentTok{\# TO EVALUATE RANDOM FOREST}
-\NormalTok{rfFunc }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(}\AttributeTok{df =}\NormalTok{ winequality, }\AttributeTok{samplingMethod =} \StringTok{"none"}\NormalTok{, }
-    \AttributeTok{nUndersample =} \DecValTok{2000}\NormalTok{, }\AttributeTok{kOversample =} \DecValTok{5}\NormalTok{, }\AttributeTok{trainPct =} \FloatTok{0.7}\NormalTok{, }\AttributeTok{importance =}\NormalTok{ F, }
-    \AttributeTok{mtry =} \DecValTok{4}\NormalTok{, }\AttributeTok{ntree =} \DecValTok{500}\NormalTok{, }\AttributeTok{show.table =}\NormalTok{ F) \{}
+\NormalTok{  \}}
+\CommentTok{# RANDOM FOREST FUNCTIONS ------------------------------------------}
+\CommentTok{# SET UP FUNCTION TO EVALUATE RANDOM FOREST}
+\NormalTok{rfFunc <-}\StringTok{ }
+\StringTok{  }\ControlFlowTok{function}\NormalTok{(}\DataTypeTok{df =}\NormalTok{ winequality, }\DataTypeTok{samplingMethod =} \StringTok{"none"}\NormalTok{, }\DataTypeTok{nUndersample =} \DecValTok{2000}\NormalTok{, }\DataTypeTok{kOversample =} \DecValTok{5}\NormalTok{,}
+           \DataTypeTok{trainPct =} \FloatTok{0.7}\NormalTok{, }\DataTypeTok{importance =}\NormalTok{ F, }\DataTypeTok{mtry =} \DecValTok{4}\NormalTok{, }\DataTypeTok{ntree =} \DecValTok{500}\NormalTok{, }\DataTypeTok{show.table =}\NormalTok{ F)\{}
     
-    \FunctionTok{require}\NormalTok{(randomForest)}
+    \KeywordTok{require}\NormalTok{(randomForest)}
     
-    \CommentTok{\# set up training/testing sets}
-\NormalTok{    n }\OtherTok{\textless{}{-}} \FunctionTok{nrow}\NormalTok{(df)}
-\NormalTok{    train.index }\OtherTok{\textless{}{-}} \FunctionTok{sample}\NormalTok{(}\FunctionTok{seq}\NormalTok{(}\DecValTok{1}\NormalTok{, n), }\FunctionTok{floor}\NormalTok{(n }\SpecialCharTok{*}\NormalTok{ trainPct), }\AttributeTok{replace =}\NormalTok{ F)}
+    \CommentTok{# set up training/testing sets}
+\NormalTok{    n <-}\StringTok{ }\KeywordTok{nrow}\NormalTok{(df)}
+\NormalTok{    train.index <-}\StringTok{ }\KeywordTok{sample}\NormalTok{(}\KeywordTok{seq}\NormalTok{(}\DecValTok{1}\NormalTok{,n), }\KeywordTok{floor}\NormalTok{(n}\OperatorTok{*}\NormalTok{trainPct), }\DataTypeTok{replace =}\NormalTok{ F)}
     
-    \CommentTok{\# training}
-\NormalTok{    train.data }\OtherTok{\textless{}{-}}\NormalTok{ df[train.index, ]  }\CommentTok{\# Normal}
+    \CommentTok{# training}
+\NormalTok{    train.data <-}\StringTok{  }\NormalTok{df[train.index,] }\CommentTok{# Normal}
     
-    \ControlFlowTok{if}\NormalTok{ (samplingMethod }\SpecialCharTok{==} \StringTok{"undersample"}\NormalTok{) \{}
-\NormalTok{        train.data }\OtherTok{\textless{}{-}} \FunctionTok{undersample}\NormalTok{(train.data, nUndersample)}
+    \ControlFlowTok{if}\NormalTok{(samplingMethod }\OperatorTok{==}\StringTok{ "undersample"}\NormalTok{)\{}
+\NormalTok{      train.data <-}\StringTok{ }\KeywordTok{undersample}\NormalTok{(train.data, nUndersample)}
 \NormalTok{    \}}
     
-    \ControlFlowTok{if}\NormalTok{ (samplingMethod }\SpecialCharTok{==} \StringTok{"oversample"}\NormalTok{) \{}
-\NormalTok{        train.data }\OtherTok{\textless{}{-}} \FunctionTok{oversample}\NormalTok{(train.data, kOversample)}
+    \ControlFlowTok{if}\NormalTok{(samplingMethod }\OperatorTok{==}\StringTok{ "oversample"}\NormalTok{)\{}
+\NormalTok{      train.data <-}\StringTok{ }\KeywordTok{oversample}\NormalTok{(train.data, kOversample)}
 \NormalTok{    \}}
     
-\NormalTok{    train.data }\OtherTok{\textless{}{-}}\NormalTok{ train.data }\SpecialCharTok{\%\textgreater{}\%}\NormalTok{ dplyr}\SpecialCharTok{::}\FunctionTok{select}\NormalTok{(qualityclass, }
-\NormalTok{        type, fixed.acidity, volatile.acidity, citric.acid, residual.sugar, }
-\NormalTok{        chlorides, free.sulfur.dioxide, total.sulfur.dioxide, }
-\NormalTok{        density, pH, sulphates, alcohol)}
+\NormalTok{    train.data <-}\StringTok{ }\NormalTok{train.data }\OperatorTok{%>%}\StringTok{  }
+\StringTok{      }\NormalTok{dplyr}\OperatorTok{::}\KeywordTok{select}\NormalTok{(qualityclass, type, fixed.acidity, volatile.acidity, citric.acid,}
+\NormalTok{                    residual.sugar, chlorides, free.sulfur.dioxide, total.sulfur.dioxide,}
+\NormalTok{                    density, pH, sulphates, alcohol)}
     
-    \CommentTok{\# testing}
-\NormalTok{    test.data }\OtherTok{\textless{}{-}}\NormalTok{ df[}\SpecialCharTok{{-}}\NormalTok{train.index, ] }\SpecialCharTok{\%\textgreater{}\%}\NormalTok{ dplyr}\SpecialCharTok{::}\FunctionTok{select}\NormalTok{(qualityclass, }
-\NormalTok{        type, fixed.acidity, volatile.acidity, citric.acid, residual.sugar, }
-\NormalTok{        chlorides, free.sulfur.dioxide, total.sulfur.dioxide, }
-\NormalTok{        density, pH, sulphates, alcohol)}
+    \CommentTok{# testing}
+\NormalTok{    test.data  <-}\StringTok{ }\NormalTok{df[}\OperatorTok{-}\NormalTok{train.index,] }\OperatorTok{%>%}\StringTok{     }
+\StringTok{      }\NormalTok{dplyr}\OperatorTok{::}\KeywordTok{select}\NormalTok{(qualityclass, type, fixed.acidity, volatile.acidity, citric.acid,}
+\NormalTok{                    residual.sugar, chlorides, free.sulfur.dioxide, total.sulfur.dioxide,}
+\NormalTok{                    density, pH, sulphates, alcohol)}
     
-    \CommentTok{\# Fit that Random Forest!}
-\NormalTok{    rf.fit }\OtherTok{\textless{}{-}} \FunctionTok{randomForest}\NormalTok{(qualityclass }\SpecialCharTok{\textasciitilde{}}\NormalTok{ ., }\AttributeTok{data =}\NormalTok{ train.data, }
-        \AttributeTok{method =} \StringTok{"class"}\NormalTok{, }\AttributeTok{ntree =}\NormalTok{ ntree, }\AttributeTok{mtry =}\NormalTok{ mtry, }\AttributeTok{importance =}\NormalTok{ importance)}
+    \CommentTok{# Fit that Random Forest!}
+\NormalTok{    rf.fit <-}\StringTok{ }\KeywordTok{randomForest}\NormalTok{(qualityclass }\OperatorTok{~}\StringTok{ }\NormalTok{., }
+                           \DataTypeTok{data=}\NormalTok{train.data,}
+                           \DataTypeTok{method=}\StringTok{"class"}\NormalTok{, }
+                           \DataTypeTok{ntree=}\NormalTok{ntree,}
+                           \DataTypeTok{mtry =}\NormalTok{ mtry,}
+                           \DataTypeTok{importance=}\NormalTok{importance}
+\NormalTok{    )}
     
-    \CommentTok{\# Get that Prediction!}
-\NormalTok{    rf.pred }\OtherTok{=} \FunctionTok{predict}\NormalTok{(rf.fit, }\AttributeTok{newdata =}\NormalTok{ test.data)}
+    \CommentTok{# Get that Prediction!}
+\NormalTok{    rf.pred =}\StringTok{ }\KeywordTok{predict}\NormalTok{(rf.fit, }\DataTypeTok{newdata =}\NormalTok{ test.data) }
     
-    \CommentTok{\# Evaluate Prediction}
-\NormalTok{    accuracy.all }\OtherTok{\textless{}{-}} \FunctionTok{mean}\NormalTok{(rf.pred }\SpecialCharTok{==}\NormalTok{ test.data}\SpecialCharTok{$}\NormalTok{qualityclass)  }\CommentTok{\#this is not working SJA}
-\NormalTok{    table }\OtherTok{\textless{}{-}} \FunctionTok{table}\NormalTok{(test.data}\SpecialCharTok{$}\NormalTok{qualityclass, rf.pred)}
-\NormalTok{    prop.table }\OtherTok{\textless{}{-}}\NormalTok{ table}\SpecialCharTok{/}\FunctionTok{rowSums}\NormalTok{(table)}
-\NormalTok{    accuracy.low }\OtherTok{\textless{}{-}}\NormalTok{ prop.table[}\DecValTok{1}\NormalTok{, }\DecValTok{1}\NormalTok{]}
-\NormalTok{    accuracy.normal }\OtherTok{\textless{}{-}}\NormalTok{ prop.table[}\DecValTok{2}\NormalTok{, }\DecValTok{2}\NormalTok{]}
-\NormalTok{    accuracy.high }\OtherTok{\textless{}{-}}\NormalTok{ prop.table[}\DecValTok{3}\NormalTok{, }\DecValTok{3}\NormalTok{]}
-\NormalTok{    accuracy }\OtherTok{\textless{}{-}} \FunctionTok{cbind}\NormalTok{(accuracy.all, accuracy.low, accuracy.normal, }
-\NormalTok{        accuracy.high)}
+    \CommentTok{# Evaluate Prediction}
+\NormalTok{    accuracy.all  <-}\StringTok{ }\KeywordTok{mean}\NormalTok{(rf.pred}\OperatorTok{==}\NormalTok{test.data}\OperatorTok{$}\NormalTok{qualityclass) }\CommentTok{#this is not working SJA}
+\NormalTok{    table    <-}\StringTok{ }\KeywordTok{table}\NormalTok{(test.data}\OperatorTok{$}\NormalTok{qualityclass, rf.pred)}
+\NormalTok{    prop.table <-}\StringTok{ }\NormalTok{table}\OperatorTok{/}\KeywordTok{rowSums}\NormalTok{(table)}
+\NormalTok{    accuracy.low    <-}\StringTok{ }\NormalTok{prop.table[}\DecValTok{1}\NormalTok{,}\DecValTok{1}\NormalTok{]}
+\NormalTok{    accuracy.normal <-}\StringTok{ }\NormalTok{prop.table[}\DecValTok{2}\NormalTok{,}\DecValTok{2}\NormalTok{]}
+\NormalTok{    accuracy.high   <-}\StringTok{ }\NormalTok{prop.table[}\DecValTok{3}\NormalTok{,}\DecValTok{3}\NormalTok{]}
+\NormalTok{    accuracy <-}\StringTok{ }\KeywordTok{cbind}\NormalTok{(accuracy.all, accuracy.low, accuracy.normal, accuracy.high)}
     
-    \ControlFlowTok{if}\NormalTok{ (show.table) \{}
-        \FunctionTok{return}\NormalTok{(}\FunctionTok{list}\NormalTok{(}\AttributeTok{accuracy =}\NormalTok{ accuracy, }\AttributeTok{table =}\NormalTok{ table, }\AttributeTok{prop.table =}\NormalTok{ prop.table))}
-\NormalTok{    \} }\ControlFlowTok{else}\NormalTok{ \{}
-        \FunctionTok{return}\NormalTok{(accuracy)}
+    \ControlFlowTok{if}\NormalTok{(show.table)\{}
+      \KeywordTok{return}\NormalTok{(}\KeywordTok{list}\NormalTok{(}\DataTypeTok{accuracy =}\NormalTok{ accuracy, }\DataTypeTok{table =}\NormalTok{ table, }\DataTypeTok{prop.table =}\NormalTok{ prop.table)) }
+\NormalTok{    \} }\ControlFlowTok{else}\NormalTok{\{}
+      \KeywordTok{return}\NormalTok{(accuracy) }
 \NormalTok{    \}}
     
-\NormalTok{\}}
-\CommentTok{\# RANDOM FOREST MCMC FUNCTION WITH PARALLEL COMPUTING}
-\NormalTok{rfMCMC }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(}\AttributeTok{B =} \DecValTok{5}\NormalTok{, }\AttributeTok{samplingMethod =} \StringTok{"none"}\NormalTok{, }\AttributeTok{nUndersample =} \DecValTok{2000}\NormalTok{, }
-    \AttributeTok{kOversample =} \DecValTok{5}\NormalTok{, }\AttributeTok{trainPct =} \FloatTok{0.7}\NormalTok{, }\AttributeTok{ntree =} \DecValTok{500}\NormalTok{, }\AttributeTok{mtry =} \DecValTok{4}\NormalTok{) \{}
-    \FunctionTok{require}\NormalTok{(furrr)}
+\NormalTok{  \}}
+\CommentTok{# RANDOM FOREST MCMC FUNCTION WITH PARALLEL COMPUTING}
+\NormalTok{rfMCMC <-}\StringTok{ }
+\StringTok{  }\ControlFlowTok{function}\NormalTok{(}\DataTypeTok{B =} \DecValTok{5}\NormalTok{, }\DataTypeTok{samplingMethod =} \StringTok{"none"}\NormalTok{, }\DataTypeTok{nUndersample =} \DecValTok{2000}\NormalTok{, }\DataTypeTok{kOversample =} \DecValTok{5}\NormalTok{, }\DataTypeTok{trainPct =} \FloatTok{0.7}\NormalTok{, }\DataTypeTok{ntree =} \DecValTok{500}\NormalTok{, }\DataTypeTok{mtry =} \DecValTok{4}\NormalTok{)\{}
+    \KeywordTok{require}\NormalTok{(furrr)}
     
-    \CommentTok{\# Create Parameter Grid}
-\NormalTok{    mcmc.grid }\OtherTok{\textless{}{-}} \FunctionTok{expand\_grid}\NormalTok{(}\AttributeTok{B =} \FunctionTok{seq}\NormalTok{(}\DecValTok{1}\NormalTok{, B), }\AttributeTok{samplingMethod =}\NormalTok{ samplingMethod, }
-        \AttributeTok{nUndersample =}\NormalTok{ nUndersample, }\AttributeTok{kOversample =}\NormalTok{ kOversample, }
-        \AttributeTok{trainPct =}\NormalTok{ trainPct, }\AttributeTok{ntree =}\NormalTok{ ntree, }\AttributeTok{mtry =}\NormalTok{ mtry)}
+    \CommentTok{# Create Parameter Grid}
+\NormalTok{    mcmc.grid <-}\StringTok{ }\KeywordTok{expand_grid}\NormalTok{(}\DataTypeTok{B =} \KeywordTok{seq}\NormalTok{(}\DecValTok{1}\NormalTok{,B),}
+                             \DataTypeTok{samplingMethod =}\NormalTok{ samplingMethod,}
+                             \DataTypeTok{nUndersample =}\NormalTok{ nUndersample,}
+                             \DataTypeTok{kOversample =}\NormalTok{ kOversample,}
+                             \DataTypeTok{trainPct =}\NormalTok{ trainPct,}
+                             \DataTypeTok{ntree =}\NormalTok{ ntree,}
+                             \DataTypeTok{mtry =}\NormalTok{ mtry)}
     
-    \CommentTok{\# Obtain Accuracy}
-\NormalTok{    accuracyList }\OtherTok{\textless{}{-}}\NormalTok{ furrr}\SpecialCharTok{::}\FunctionTok{future\_pmap}\NormalTok{(mcmc.grid[, }\SpecialCharTok{{-}}\DecValTok{1}\NormalTok{], rfFunc)}
-\NormalTok{    rfAccuracy }\OtherTok{\textless{}{-}} \FunctionTok{matrix}\NormalTok{(}\FunctionTok{unlist}\NormalTok{(accuracyList, }\AttributeTok{use.names =} \ConstantTok{TRUE}\NormalTok{), }
-        \AttributeTok{ncol =} \DecValTok{4}\NormalTok{, }\AttributeTok{nrow =} \FunctionTok{nrow}\NormalTok{(mcmc.grid), }\AttributeTok{byrow =}\NormalTok{ T)}
-    \FunctionTok{colnames}\NormalTok{(rfAccuracy) }\OtherTok{\textless{}{-}} \FunctionTok{colnames}\NormalTok{(accuracyList[[}\DecValTok{1}\NormalTok{]])}
+    \CommentTok{# Obtain Accuracy}
+\NormalTok{    accuracyList <-}\StringTok{ }\NormalTok{furrr}\OperatorTok{::}\KeywordTok{future_pmap}\NormalTok{(mcmc.grid[,}\OperatorTok{-}\DecValTok{1}\NormalTok{], rfFunc)}
+\NormalTok{    rfAccuracy <-}\StringTok{ }\KeywordTok{matrix}\NormalTok{(}\KeywordTok{unlist}\NormalTok{(accuracyList, }\DataTypeTok{use.names =} \OtherTok{TRUE}\NormalTok{), }\DataTypeTok{ncol =} \DecValTok{4}\NormalTok{, }\DataTypeTok{nrow =} \KeywordTok{nrow}\NormalTok{(mcmc.grid), }\DataTypeTok{byrow =}\NormalTok{ T)}
+    \KeywordTok{colnames}\NormalTok{(rfAccuracy) <-}\StringTok{ }\KeywordTok{colnames}\NormalTok{(accuracyList[[}\DecValTok{1}\NormalTok{]])}
     
-    \CommentTok{\# Summarize Accuracy}
-\NormalTok{    results }\OtherTok{\textless{}{-}} \FunctionTok{cbind}\NormalTok{(mcmc.grid, rfAccuracy) }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{pivot\_longer}\NormalTok{(}\AttributeTok{cols =} \FunctionTok{c}\NormalTok{(}\StringTok{"accuracy.all"}\NormalTok{, }
-        \StringTok{"accuracy.low"}\NormalTok{, }\StringTok{"accuracy.normal"}\NormalTok{, }\StringTok{"accuracy.high"}\NormalTok{), }
-        \AttributeTok{names\_to =} \StringTok{"accuracyGroup"}\NormalTok{, }\AttributeTok{values\_to =} \StringTok{"accuracy"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%} 
-        \FunctionTok{mutate}\NormalTok{(}\AttributeTok{Method =} \StringTok{"Random Forest"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}\NormalTok{ dplyr}\SpecialCharTok{::}\FunctionTok{group\_by}\NormalTok{(Method, }
-\NormalTok{        accuracyGroup, samplingMethod, nUndersample, kOversample, }
-\NormalTok{        ntree, mtry) }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{summarise}\NormalTok{(}\AttributeTok{B =} \FunctionTok{n}\NormalTok{(), }\AttributeTok{mean =} \FunctionTok{mean}\NormalTok{(accuracy), }
-        \AttributeTok{lower =} \FunctionTok{quantile}\NormalTok{(accuracy, }\AttributeTok{probs =} \FunctionTok{c}\NormalTok{(}\FloatTok{0.05}\NormalTok{)), }\AttributeTok{upper =} \FunctionTok{quantile}\NormalTok{(accuracy, }
-            \AttributeTok{probs =} \FunctionTok{c}\NormalTok{(}\FloatTok{0.95}\NormalTok{))) }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{ungroup}\NormalTok{()}
+    \CommentTok{# Summarize Accuracy}
+\NormalTok{    results <-}\StringTok{ }\KeywordTok{cbind}\NormalTok{(mcmc.grid, rfAccuracy) }\OperatorTok{%>%}
+\StringTok{      }\KeywordTok{pivot_longer}\NormalTok{(}\DataTypeTok{cols =} \KeywordTok{c}\NormalTok{(}\StringTok{"accuracy.all"}\NormalTok{, }\StringTok{"accuracy.low"}\NormalTok{, }\StringTok{"accuracy.normal"}\NormalTok{, }\StringTok{"accuracy.high"}\NormalTok{),}
+                   \DataTypeTok{names_to =} \StringTok{"accuracyGroup"}\NormalTok{,}
+                   \DataTypeTok{values_to =} \StringTok{"accuracy"}\NormalTok{) }\OperatorTok{%>%}
+\StringTok{      }\KeywordTok{mutate}\NormalTok{(}\DataTypeTok{Method =} \StringTok{"Random Forest"}\NormalTok{) }\OperatorTok{%>%}
+\StringTok{      }\NormalTok{dplyr}\OperatorTok{::}\KeywordTok{group_by}\NormalTok{(Method, accuracyGroup, samplingMethod, nUndersample, kOversample, ntree, mtry) }\OperatorTok{%>%}
+\StringTok{      }\KeywordTok{summarise}\NormalTok{(}\DataTypeTok{B =} \KeywordTok{n}\NormalTok{(),}
+                \DataTypeTok{mean  =} \KeywordTok{mean}\NormalTok{(accuracy),}
+                \DataTypeTok{lower =} \KeywordTok{quantile}\NormalTok{(accuracy, }\DataTypeTok{probs =} \KeywordTok{c}\NormalTok{(}\FloatTok{0.05}\NormalTok{)),}
+                \DataTypeTok{upper =} \KeywordTok{quantile}\NormalTok{(accuracy, }\DataTypeTok{probs =} \KeywordTok{c}\NormalTok{(}\FloatTok{0.95}\NormalTok{))) }\OperatorTok{%>%}
+\StringTok{      }\KeywordTok{ungroup}\NormalTok{()}
     
-    \FunctionTok{return}\NormalTok{(results)}
+    \KeywordTok{return}\NormalTok{(results)}
     
-\NormalTok{\}}
-\CommentTok{\# HYPERPARAMETER GRID SEARCH}
-\CommentTok{\# {-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}}
-\NormalTok{setB }\OtherTok{=} \DecValTok{50}
-\CommentTok{\# XGBOOST}
-\FunctionTok{tic}\NormalTok{()}
-\NormalTok{xgbMCMC.none.gridsearch }\OtherTok{\textless{}{-}} \FunctionTok{xgbMCMC}\NormalTok{(}\AttributeTok{samplingMethod =} \StringTok{"none"}\NormalTok{, }\AttributeTok{nUndersample =} \ConstantTok{NA}\NormalTok{, }
-    \AttributeTok{kOversample =} \ConstantTok{NA}\NormalTok{, }\AttributeTok{trainPct =} \FloatTok{0.7}\NormalTok{, }\AttributeTok{B =}\NormalTok{ setB, }\AttributeTok{max.depth =} \FunctionTok{seq}\NormalTok{(}\DecValTok{50}\NormalTok{, }
-        \DecValTok{250}\NormalTok{, }\DecValTok{50}\NormalTok{), }\AttributeTok{eta =} \FunctionTok{c}\NormalTok{(}\FloatTok{0.05}\NormalTok{, }\FloatTok{0.1}\NormalTok{, }\FloatTok{0.25}\NormalTok{, }\FloatTok{0.5}\NormalTok{, }\FloatTok{0.75}\NormalTok{, }\FloatTok{0.9}\NormalTok{, }\FloatTok{0.95}\NormalTok{), }
-    \AttributeTok{nround =} \FunctionTok{seq}\NormalTok{(}\DecValTok{2}\NormalTok{, }\DecValTok{12}\NormalTok{, }\DecValTok{2}\NormalTok{), }\AttributeTok{nthread =} \FunctionTok{seq}\NormalTok{(}\DecValTok{2}\NormalTok{, }\DecValTok{12}\NormalTok{, }\DecValTok{2}\NormalTok{))}
-\FunctionTok{toc}\NormalTok{()}
-\NormalTok{xgbMCMC.none.gridsearch }\OtherTok{\textless{}{-}}\NormalTok{ xgbMCMC.none.gridsearch }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{filter}\NormalTok{(accuracyGroup }\SpecialCharTok{==} 
-    \StringTok{"accuracy.all"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{arrange}\NormalTok{(}\SpecialCharTok{{-}}\NormalTok{mean)}
-\NormalTok{xgbMCMC.none.gridsearch}
-\CommentTok{\# write.csv(xgbMCMC.none.gridsearch, file =}
-\CommentTok{\# \textquotesingle{}reports/xgbMCMC.none.gridsearch.csv\textquotesingle{}, row.names = F, na =}
-\CommentTok{\# \textquotesingle{}\textquotesingle{})}
-\NormalTok{xgbMCMC.none.gridsearch.plot }\OtherTok{\textless{}{-}}\NormalTok{ xgbMCMC.none.gridsearch[}\FunctionTok{c}\NormalTok{(}\DecValTok{0}\SpecialCharTok{:}\DecValTok{10}\NormalTok{), }
-\NormalTok{    ] }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{mutate}\NormalTok{(}\AttributeTok{label =} \FunctionTok{paste}\NormalTok{(}\StringTok{"Max Depth = "}\NormalTok{, max.depth, }\StringTok{"; Eta = "}\NormalTok{, }
-\NormalTok{    eta, }\StringTok{"; nround = "}\NormalTok{, nround, }\StringTok{"; nthread = "}\NormalTok{, nthread, }\AttributeTok{sep =} \StringTok{""}\NormalTok{)) }\SpecialCharTok{\%\textgreater{}\%} 
-    \FunctionTok{ggplot}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ mean, }\AttributeTok{y =} \FunctionTok{reorder}\NormalTok{(label, mean))) }\SpecialCharTok{+} \FunctionTok{geom\_point}\NormalTok{() }\SpecialCharTok{+} 
-    \FunctionTok{geom\_errorbar}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{xmin =}\NormalTok{ lower, }\AttributeTok{xmax =}\NormalTok{ upper)) }\SpecialCharTok{+} \FunctionTok{theme\_bw}\NormalTok{() }\SpecialCharTok{+} 
-    \FunctionTok{scale\_y\_discrete}\NormalTok{(}\StringTok{""}\NormalTok{) }\SpecialCharTok{+} \FunctionTok{scale\_x\_continuous}\NormalTok{(}\StringTok{"Overall Accuracy"}\NormalTok{, }
-    \AttributeTok{labels =}\NormalTok{ scales}\SpecialCharTok{::}\NormalTok{percent) }\SpecialCharTok{+} \FunctionTok{ggtitle}\NormalTok{(}\StringTok{"XGBoost (No resampling)"}\NormalTok{)}
+\NormalTok{  \}}
+\CommentTok{# HYPERPARAMETER GRID SEARCH ------------------------------------------}
+\NormalTok{setB =}\StringTok{ }\DecValTok{50}
+\CommentTok{# XGBOOST}
+\KeywordTok{tic}\NormalTok{()}
+\NormalTok{xgbMCMC.none.gridsearch <-}\StringTok{ }\KeywordTok{xgbMCMC}\NormalTok{(}\DataTypeTok{samplingMethod =} \StringTok{"none"}\NormalTok{, }
+                                   \DataTypeTok{nUndersample =} \OtherTok{NA}\NormalTok{, }
+                                   \DataTypeTok{kOversample =} \OtherTok{NA}\NormalTok{,}
+                                   \DataTypeTok{trainPct =} \FloatTok{0.7}\NormalTok{, }
+                                   \DataTypeTok{B =}\NormalTok{ setB, }
+                                   \DataTypeTok{max.depth =} \KeywordTok{seq}\NormalTok{(}\DecValTok{50}\NormalTok{, }\DecValTok{250}\NormalTok{, }\DecValTok{50}\NormalTok{), }
+                                   \DataTypeTok{eta =} \KeywordTok{c}\NormalTok{(}\FloatTok{0.05}\NormalTok{, }\FloatTok{0.1}\NormalTok{, }\FloatTok{0.25}\NormalTok{, }\FloatTok{0.5}\NormalTok{, }\FloatTok{0.75}\NormalTok{, }\FloatTok{0.9}\NormalTok{, }\FloatTok{0.95}\NormalTok{), }
+                                   \DataTypeTok{nround =} \KeywordTok{seq}\NormalTok{(}\DecValTok{2}\NormalTok{,}\DecValTok{12}\NormalTok{,}\DecValTok{2}\NormalTok{), }
+                                   \DataTypeTok{nthread =} \KeywordTok{seq}\NormalTok{(}\DecValTok{2}\NormalTok{,}\DecValTok{12}\NormalTok{,}\DecValTok{2}\NormalTok{)}
+\NormalTok{                                   )}
+\KeywordTok{toc}\NormalTok{()}
+\NormalTok{xgbMCMC.none.gridsearch <-}\StringTok{ }\NormalTok{xgbMCMC.none.gridsearch }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{filter}\NormalTok{(accuracyGroup }\OperatorTok{==}\StringTok{ "accuracy.all"}\NormalTok{) }\OperatorTok{%>%}
+\StringTok{  }\KeywordTok{arrange}\NormalTok{(}\OperatorTok{-}\NormalTok{mean)}
+\NormalTok{xgbMCMC.none.gridsearch }
+\CommentTok{# write.csv(xgbMCMC.none.gridsearch, file = "reports/xgbMCMC.none.gridsearch.csv", row.names = F, na = "")}
+\NormalTok{xgbMCMC.none.gridsearch.plot <-}\StringTok{ }\NormalTok{xgbMCMC.none.gridsearch[}\KeywordTok{c}\NormalTok{(}\DecValTok{0}\OperatorTok{:}\DecValTok{10}\NormalTok{),] }\OperatorTok{%>%}
+\StringTok{  }\KeywordTok{mutate}\NormalTok{(}\DataTypeTok{label =} \KeywordTok{paste}\NormalTok{(}\StringTok{"Max Depth = "}\NormalTok{, max.depth, }\StringTok{"; Eta = "}\NormalTok{, eta, }\StringTok{"; nround = "}\NormalTok{, nround, }\StringTok{"; nthread = "}\NormalTok{, nthread, }\DataTypeTok{sep =} \StringTok{""}\NormalTok{)) }\OperatorTok{%>%}
+\KeywordTok{ggplot}\NormalTok{(}\KeywordTok{aes}\NormalTok{(}\DataTypeTok{x =}\NormalTok{ mean, }\DataTypeTok{y =} \KeywordTok{reorder}\NormalTok{(label, mean))) }\OperatorTok{+}
+\StringTok{  }\KeywordTok{geom_point}\NormalTok{() }\OperatorTok{+}
+\StringTok{  }\KeywordTok{geom_errorbar}\NormalTok{(}\KeywordTok{aes}\NormalTok{(}\DataTypeTok{xmin =}\NormalTok{ lower, }\DataTypeTok{xmax =}\NormalTok{ upper)) }\OperatorTok{+}
+\StringTok{  }\KeywordTok{theme_bw}\NormalTok{() }\OperatorTok{+}
+\StringTok{  }\KeywordTok{scale_y_discrete}\NormalTok{(}\StringTok{""}\NormalTok{) }\OperatorTok{+}
+\StringTok{  }\KeywordTok{scale_x_continuous}\NormalTok{(}\StringTok{"Overall Accuracy"}\NormalTok{, }\DataTypeTok{labels =}\NormalTok{ scales}\OperatorTok{::}\NormalTok{percent) }\OperatorTok{+}
+\StringTok{  }\KeywordTok{ggtitle}\NormalTok{(}\StringTok{"XGBoost (No resampling)"}\NormalTok{)}
 \NormalTok{xgbMCMC.none.gridsearch.plot}
-\FunctionTok{tic}\NormalTok{()}
-\NormalTok{xgbMCMC.undersample.gridsearch }\OtherTok{\textless{}{-}} \FunctionTok{xgbMCMC}\NormalTok{(}\AttributeTok{samplingMethod =} \StringTok{"undersample"}\NormalTok{, }
-    \AttributeTok{nUndersample =} \FunctionTok{seq}\NormalTok{(}\DecValTok{1000}\NormalTok{, }\DecValTok{2000}\NormalTok{, }\DecValTok{500}\NormalTok{), }\AttributeTok{kOversample =} \ConstantTok{NA}\NormalTok{, }\AttributeTok{trainPct =} \FloatTok{0.7}\NormalTok{, }
-    \AttributeTok{B =}\NormalTok{ setB, }\AttributeTok{max.depth =} \FunctionTok{seq}\NormalTok{(}\DecValTok{50}\NormalTok{, }\DecValTok{250}\NormalTok{, }\DecValTok{50}\NormalTok{), }\AttributeTok{eta =} \FunctionTok{c}\NormalTok{(}\FloatTok{0.5}\NormalTok{, }\FloatTok{0.1}\NormalTok{, }
-        \FloatTok{0.25}\NormalTok{, }\FloatTok{0.5}\NormalTok{, }\FloatTok{0.75}\NormalTok{, }\FloatTok{0.9}\NormalTok{, }\FloatTok{0.95}\NormalTok{), }\AttributeTok{nround =} \FunctionTok{seq}\NormalTok{(}\DecValTok{2}\NormalTok{, }\DecValTok{12}\NormalTok{, }\DecValTok{2}\NormalTok{), }
-    \AttributeTok{nthread =} \FunctionTok{seq}\NormalTok{(}\DecValTok{2}\NormalTok{, }\DecValTok{12}\NormalTok{, }\DecValTok{2}\NormalTok{))}
-\FunctionTok{toc}\NormalTok{()}
-\NormalTok{xgbMCMC.undersample.gridsearch }\OtherTok{\textless{}{-}}\NormalTok{ xgbMCMC.undersample.gridsearch }\SpecialCharTok{\%\textgreater{}\%} 
-    \FunctionTok{select}\NormalTok{(accuracyGroup }\SpecialCharTok{==} \StringTok{"accuracy.all"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{arrange}\NormalTok{(}\SpecialCharTok{{-}}\NormalTok{mean)}
+\KeywordTok{tic}\NormalTok{()}
+\NormalTok{xgbMCMC.undersample.gridsearch <-}\StringTok{ }\KeywordTok{xgbMCMC}\NormalTok{(}\DataTypeTok{samplingMethod =} \StringTok{"undersample"}\NormalTok{, }
+                                          \DataTypeTok{nUndersample =} \KeywordTok{seq}\NormalTok{(}\DecValTok{1000}\NormalTok{, }\DecValTok{2000}\NormalTok{, }\DecValTok{500}\NormalTok{), }
+                                          \DataTypeTok{kOversample =} \OtherTok{NA}\NormalTok{,}
+                                          \DataTypeTok{trainPct =} \FloatTok{0.7}\NormalTok{, }
+                                          \DataTypeTok{B =}\NormalTok{ setB, }
+                                          \DataTypeTok{max.depth =} \KeywordTok{seq}\NormalTok{(}\DecValTok{50}\NormalTok{, }\DecValTok{250}\NormalTok{, }\DecValTok{50}\NormalTok{), }
+                                          \DataTypeTok{eta =} \KeywordTok{c}\NormalTok{(}\FloatTok{0.5}\NormalTok{, }\FloatTok{0.1}\NormalTok{, }\FloatTok{0.25}\NormalTok{, }\FloatTok{0.5}\NormalTok{, }\FloatTok{0.75}\NormalTok{, }\FloatTok{0.9}\NormalTok{, }\FloatTok{0.95}\NormalTok{), }
+                                          \DataTypeTok{nround =} \KeywordTok{seq}\NormalTok{(}\DecValTok{2}\NormalTok{,}\DecValTok{12}\NormalTok{,}\DecValTok{2}\NormalTok{), }
+                                          \DataTypeTok{nthread =} \KeywordTok{seq}\NormalTok{(}\DecValTok{2}\NormalTok{,}\DecValTok{12}\NormalTok{,}\DecValTok{2}\NormalTok{)}
+\NormalTok{                                          )}
+\KeywordTok{toc}\NormalTok{()}
+\NormalTok{xgbMCMC.undersample.gridsearch <-}\StringTok{ }\NormalTok{xgbMCMC.undersample.gridsearch }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{select}\NormalTok{(accuracyGroup }\OperatorTok{==}\StringTok{ "accuracy.all"}\NormalTok{) }\OperatorTok{%>%}
+\StringTok{  }\KeywordTok{arrange}\NormalTok{(}\OperatorTok{-}\NormalTok{mean)}
 \NormalTok{xgbMCMC.undersample.gridsearch}
-\CommentTok{\# write.csv(xgbMCMC.undersample.gridsearch, file =}
-\CommentTok{\# \textquotesingle{}reports/xgbMCMC.undersample.gridsearch.csv\textquotesingle{}, row.names =}
-\CommentTok{\# F, na = \textquotesingle{}\textquotesingle{})}
-\NormalTok{xgbMCMC.undersample.gridsearch.plot }\OtherTok{\textless{}{-}}\NormalTok{ xgbMCMC.undersample.gridsearch[}\FunctionTok{c}\NormalTok{(}\DecValTok{0}\SpecialCharTok{:}\DecValTok{10}\NormalTok{), }
-\NormalTok{    ] }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{mutate}\NormalTok{(}\AttributeTok{label =} \FunctionTok{paste}\NormalTok{(}\StringTok{"Max Depth = "}\NormalTok{, max.depth, }\StringTok{"; Eta = "}\NormalTok{, }
-\NormalTok{    eta, }\StringTok{"; nround = "}\NormalTok{, nround, }\StringTok{"; nthread = "}\NormalTok{, nthread, }\StringTok{" (N = "}\NormalTok{, }
-\NormalTok{    nundersample, }\StringTok{")"}\NormalTok{, }\AttributeTok{sep =} \StringTok{""}\NormalTok{))}
-\FunctionTok{ggplot}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ mean, }\AttributeTok{y =} \FunctionTok{reorder}\NormalTok{(label, mean))) }\SpecialCharTok{+} \FunctionTok{geom\_point}\NormalTok{() }\SpecialCharTok{+} 
-    \FunctionTok{geom\_errorbar}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{xmin =}\NormalTok{ lower, }\AttributeTok{xmax =}\NormalTok{ upper)) }\SpecialCharTok{+} \FunctionTok{theme\_bw}\NormalTok{() }\SpecialCharTok{+} 
-    \FunctionTok{scale\_y\_discrete}\NormalTok{(}\StringTok{""}\NormalTok{) }\SpecialCharTok{+} \FunctionTok{scale\_x\_continuous}\NormalTok{(}\StringTok{"Overall Accuracy"}\NormalTok{, }
-    \AttributeTok{labels =}\NormalTok{ scales}\SpecialCharTok{::}\NormalTok{percent) }\SpecialCharTok{+} \FunctionTok{ggtitle}\NormalTok{(}\StringTok{"XGBoost (Undersampling)"}\NormalTok{)}
-\NormalTok{xgbMCMC.undersample.gridsearch.plot}
-\FunctionTok{tic}\NormalTok{()}
-\NormalTok{xgbMCMC.oversample.gridsearch }\OtherTok{\textless{}{-}} \FunctionTok{xgbMCMC}\NormalTok{(}\AttributeTok{samplingMethod =} \StringTok{"oversample"}\NormalTok{, }
-    \AttributeTok{nUndersample =} \ConstantTok{NA}\NormalTok{, }\AttributeTok{kOversample =} \FunctionTok{seq}\NormalTok{(}\DecValTok{3}\NormalTok{, }\DecValTok{7}\NormalTok{, }\DecValTok{2}\NormalTok{), }\AttributeTok{trainPct =} \FloatTok{0.7}\NormalTok{, }
-    \AttributeTok{B =}\NormalTok{ setB, }\AttributeTok{max.depth =} \FunctionTok{seq}\NormalTok{(}\DecValTok{50}\NormalTok{, }\DecValTok{250}\NormalTok{, }\DecValTok{50}\NormalTok{), }\AttributeTok{eta =} \FunctionTok{c}\NormalTok{(}\FloatTok{0.5}\NormalTok{, }\FloatTok{0.1}\NormalTok{, }
-        \FloatTok{0.25}\NormalTok{, }\FloatTok{0.5}\NormalTok{, }\FloatTok{0.75}\NormalTok{, }\FloatTok{0.9}\NormalTok{, }\FloatTok{0.95}\NormalTok{), }\AttributeTok{nround =} \FunctionTok{seq}\NormalTok{(}\DecValTok{2}\NormalTok{, }\DecValTok{12}\NormalTok{, }\DecValTok{2}\NormalTok{), }
-    \AttributeTok{nthread =} \FunctionTok{seq}\NormalTok{(}\DecValTok{2}\NormalTok{, }\DecValTok{12}\NormalTok{, }\DecValTok{2}\NormalTok{))}
-\FunctionTok{toc}\NormalTok{()}
-\NormalTok{xgbMCMC.oversample.gridsearch }\OtherTok{\textless{}{-}}\NormalTok{ xgbMCMC.oversample.gridsearch }\SpecialCharTok{\%\textgreater{}\%} 
-    \FunctionTok{select}\NormalTok{(accuracyGroup }\SpecialCharTok{==} \StringTok{"accuracy.all"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{arrange}\NormalTok{(}\SpecialCharTok{{-}}\NormalTok{mean)}
+\CommentTok{# write.csv(xgbMCMC.undersample.gridsearch, file = "reports/xgbMCMC.undersample.gridsearch.csv", row.names = F, na = "")}
+\NormalTok{xgbMCMC.undersample.gridsearch.plot <-}\StringTok{ }\NormalTok{xgbMCMC.undersample.gridsearch[}\KeywordTok{c}\NormalTok{(}\DecValTok{0}\OperatorTok{:}\DecValTok{10}\NormalTok{),] }\OperatorTok{%>%}
+\StringTok{  }\KeywordTok{mutate}\NormalTok{(}\DataTypeTok{label =} \KeywordTok{paste}\NormalTok{(}\StringTok{"Max Depth = "}\NormalTok{, max.depth, }\StringTok{"; Eta = "}\NormalTok{, eta, }\StringTok{"; nround = "}\NormalTok{, nround, }\StringTok{"; nthread = "}\NormalTok{, nthread, }\StringTok{" (N = "}\NormalTok{, nundersample, }\StringTok{")"}\NormalTok{, }\DataTypeTok{sep =} \StringTok{""}\NormalTok{))}
+\KeywordTok{ggplot}\NormalTok{(}\KeywordTok{aes}\NormalTok{(}\DataTypeTok{x =}\NormalTok{ mean, }\DataTypeTok{y =} \KeywordTok{reorder}\NormalTok{(label, mean))) }\OperatorTok{+}
+\StringTok{  }\KeywordTok{geom_point}\NormalTok{() }\OperatorTok{+}
+\StringTok{  }\KeywordTok{geom_errorbar}\NormalTok{(}\KeywordTok{aes}\NormalTok{(}\DataTypeTok{xmin =}\NormalTok{ lower, }\DataTypeTok{xmax =}\NormalTok{ upper)) }\OperatorTok{+}
+\StringTok{  }\KeywordTok{theme_bw}\NormalTok{() }\OperatorTok{+}
+\StringTok{  }\KeywordTok{scale_y_discrete}\NormalTok{(}\StringTok{""}\NormalTok{) }\OperatorTok{+}
+\StringTok{  }\KeywordTok{scale_x_continuous}\NormalTok{(}\StringTok{"Overall Accuracy"}\NormalTok{, }\DataTypeTok{labels =}\NormalTok{ scales}\OperatorTok{::}\NormalTok{percent) }\OperatorTok{+}
+\StringTok{  }\KeywordTok{ggtitle}\NormalTok{(}\StringTok{"XGBoost (Undersampling)"}\NormalTok{)}
+\NormalTok{xgbMCMC.undersample.gridsearch.plot }
+\KeywordTok{tic}\NormalTok{()}
+\NormalTok{xgbMCMC.oversample.gridsearch <-}\StringTok{ }\KeywordTok{xgbMCMC}\NormalTok{(}\DataTypeTok{samplingMethod =} \StringTok{"oversample"}\NormalTok{, }
+                                         \DataTypeTok{nUndersample =} \OtherTok{NA}\NormalTok{, }
+                                         \DataTypeTok{kOversample =} \KeywordTok{seq}\NormalTok{(}\DecValTok{3}\NormalTok{,}\DecValTok{7}\NormalTok{,}\DecValTok{2}\NormalTok{),}
+                                         \DataTypeTok{trainPct =} \FloatTok{0.7}\NormalTok{, }
+                                         \DataTypeTok{B =}\NormalTok{ setB, }
+                                         \DataTypeTok{max.depth =} \KeywordTok{seq}\NormalTok{(}\DecValTok{50}\NormalTok{, }\DecValTok{250}\NormalTok{, }\DecValTok{50}\NormalTok{), }
+                                         \DataTypeTok{eta =} \KeywordTok{c}\NormalTok{(}\FloatTok{0.5}\NormalTok{, }\FloatTok{0.1}\NormalTok{, }\FloatTok{0.25}\NormalTok{, }\FloatTok{0.5}\NormalTok{, }\FloatTok{0.75}\NormalTok{, }\FloatTok{0.9}\NormalTok{, }\FloatTok{0.95}\NormalTok{), }
+                                         \DataTypeTok{nround =} \KeywordTok{seq}\NormalTok{(}\DecValTok{2}\NormalTok{,}\DecValTok{12}\NormalTok{,}\DecValTok{2}\NormalTok{), }
+                                         \DataTypeTok{nthread =} \KeywordTok{seq}\NormalTok{(}\DecValTok{2}\NormalTok{,}\DecValTok{12}\NormalTok{,}\DecValTok{2}\NormalTok{)}
+\NormalTok{                                         )}
+\KeywordTok{toc}\NormalTok{()}
+\NormalTok{xgbMCMC.oversample.gridsearch <-}\StringTok{ }\NormalTok{xgbMCMC.oversample.gridsearch }\OperatorTok{%>%}
+\StringTok{  }\KeywordTok{select}\NormalTok{(accuracyGroup }\OperatorTok{==}\StringTok{ "accuracy.all"}\NormalTok{) }\OperatorTok{%>%}
+\StringTok{  }\KeywordTok{arrange}\NormalTok{(}\OperatorTok{-}\NormalTok{mean)}
 \NormalTok{xgbMCMC.oversample.gridsearch}
-\CommentTok{\# write.csv(xgbMCMC.oversample.gridsearch, file =}
-\CommentTok{\# \textquotesingle{}reports/xgbMCMC.oversample.gridsearch.csv\textquotesingle{}, row.names = F,}
-\CommentTok{\# na = \textquotesingle{}\textquotesingle{})}
-\NormalTok{xgbMCMC.oversample.gridsearch.plot }\OtherTok{\textless{}{-}}\NormalTok{ xgbMCMC.oversample.gridsearch[}\FunctionTok{c}\NormalTok{(}\DecValTok{0}\SpecialCharTok{:}\DecValTok{10}\NormalTok{), }
-\NormalTok{    ] }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{mutate}\NormalTok{(}\AttributeTok{label =} \FunctionTok{paste}\NormalTok{(}\StringTok{"Max Depth = "}\NormalTok{, max.depth, }\StringTok{"; Eta = "}\NormalTok{, }
-\NormalTok{    eta, }\StringTok{"; nround = "}\NormalTok{, nround, }\StringTok{"; nthread = "}\NormalTok{, nthread, }\StringTok{" (k = "}\NormalTok{, }
-\NormalTok{    kOversample, }\StringTok{")"}\NormalTok{, }\AttributeTok{sep =} \StringTok{""}\NormalTok{))}
-\FunctionTok{ggplot}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ mean, }\AttributeTok{y =} \FunctionTok{reorder}\NormalTok{(label, mean))) }\SpecialCharTok{+} \FunctionTok{geom\_point}\NormalTok{() }\SpecialCharTok{+} 
-    \FunctionTok{geom\_errorbar}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{xmin =}\NormalTok{ lower, }\AttributeTok{xmax =}\NormalTok{ upper)) }\SpecialCharTok{+} \FunctionTok{theme\_bw}\NormalTok{() }\SpecialCharTok{+} 
-    \FunctionTok{scale\_y\_discrete}\NormalTok{(}\StringTok{""}\NormalTok{) }\SpecialCharTok{+} \FunctionTok{scale\_x\_continuous}\NormalTok{(}\StringTok{"Overall Accuracy"}\NormalTok{, }
-    \AttributeTok{labels =}\NormalTok{ scales}\SpecialCharTok{::}\NormalTok{percent) }\SpecialCharTok{+} \FunctionTok{ggtitle}\NormalTok{(}\StringTok{"XGBoost (Oversampling)"}\NormalTok{)}
+\CommentTok{# write.csv(xgbMCMC.oversample.gridsearch, file = "reports/xgbMCMC.oversample.gridsearch.csv", row.names = F, na = "")}
+\NormalTok{xgbMCMC.oversample.gridsearch.plot <-}\StringTok{ }\NormalTok{xgbMCMC.oversample.gridsearch[}\KeywordTok{c}\NormalTok{(}\DecValTok{0}\OperatorTok{:}\DecValTok{10}\NormalTok{),] }\OperatorTok{%>%}
+\StringTok{  }\KeywordTok{mutate}\NormalTok{(}\DataTypeTok{label =} \KeywordTok{paste}\NormalTok{(}\StringTok{"Max Depth = "}\NormalTok{, max.depth, }\StringTok{"; Eta = "}\NormalTok{, eta, }\StringTok{"; nround = "}\NormalTok{, nround, }\StringTok{"; nthread = "}\NormalTok{, nthread, }\StringTok{" (k = "}\NormalTok{, kOversample, }\StringTok{")"}\NormalTok{, }\DataTypeTok{sep =} \StringTok{""}\NormalTok{))}
+  \KeywordTok{ggplot}\NormalTok{(}\KeywordTok{aes}\NormalTok{(}\DataTypeTok{x =}\NormalTok{ mean, }\DataTypeTok{y =} \KeywordTok{reorder}\NormalTok{(label, mean))) }\OperatorTok{+}
+\StringTok{    }\KeywordTok{geom_point}\NormalTok{() }\OperatorTok{+}
+\StringTok{    }\KeywordTok{geom_errorbar}\NormalTok{(}\KeywordTok{aes}\NormalTok{(}\DataTypeTok{xmin =}\NormalTok{ lower, }\DataTypeTok{xmax =}\NormalTok{ upper)) }\OperatorTok{+}
+\StringTok{    }\KeywordTok{theme_bw}\NormalTok{() }\OperatorTok{+}
+\StringTok{    }\KeywordTok{scale_y_discrete}\NormalTok{(}\StringTok{""}\NormalTok{) }\OperatorTok{+}
+\StringTok{    }\KeywordTok{scale_x_continuous}\NormalTok{(}\StringTok{"Overall Accuracy"}\NormalTok{, }\DataTypeTok{labels =}\NormalTok{ scales}\OperatorTok{::}\NormalTok{percent) }\OperatorTok{+}
+\StringTok{    }\KeywordTok{ggtitle}\NormalTok{(}\StringTok{"XGBoost (Oversampling)"}\NormalTok{)}
 \NormalTok{xgbMCMC.oversample.gridsearch.plot}
-\CommentTok{\# RANDOM FOREST No resampling}
-\FunctionTok{tic}\NormalTok{()}
-\NormalTok{rfMCMC.none.gridsearch }\OtherTok{\textless{}{-}} \FunctionTok{rfMCMC}\NormalTok{(}\AttributeTok{samplingMethod =} \StringTok{"none"}\NormalTok{, }\AttributeTok{nUndersample =} \ConstantTok{NA}\NormalTok{, }
-    \AttributeTok{kOversample =} \ConstantTok{NA}\NormalTok{, }\AttributeTok{trainPct =} \FloatTok{0.7}\NormalTok{, }\AttributeTok{B =}\NormalTok{ setB, }\AttributeTok{ntree =} \FunctionTok{seq}\NormalTok{(}\DecValTok{200}\NormalTok{, }
-        \DecValTok{800}\NormalTok{, }\DecValTok{200}\NormalTok{), }\AttributeTok{mtry =} \FunctionTok{seq}\NormalTok{(}\DecValTok{2}\NormalTok{, }\DecValTok{10}\NormalTok{, }\DecValTok{2}\NormalTok{)  }\CommentTok{\# Default should be 4}
-\NormalTok{)}
-\FunctionTok{toc}\NormalTok{()}
-\NormalTok{rfMCMC.none.gridsearch }\OtherTok{\textless{}{-}}\NormalTok{ rfMCMC.none.gridsearch }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{filter}\NormalTok{(accuracyGroup }\SpecialCharTok{==} 
-    \StringTok{"accuracy.all"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{arrange}\NormalTok{(}\SpecialCharTok{{-}}\NormalTok{mean)}
-\NormalTok{rfMCMC.none.gridsearch}
-\CommentTok{\# write.csv(rfMCMC.none.gridsearch, file =}
-\CommentTok{\# \textquotesingle{}reports/rfMCMC.none.gridsearch.csv\textquotesingle{}, row.names = F, na =}
-\CommentTok{\# \textquotesingle{}\textquotesingle{})}
-\NormalTok{rfMCMC.none.gridsearch.plot }\OtherTok{\textless{}{-}}\NormalTok{ rfMCMC.none.gridsearch[}\FunctionTok{c}\NormalTok{(}\DecValTok{0}\SpecialCharTok{:}\DecValTok{10}\NormalTok{), }
-\NormalTok{    ] }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{mutate}\NormalTok{(}\AttributeTok{label =} \FunctionTok{paste}\NormalTok{(}\StringTok{"Ntree = "}\NormalTok{, ntree, }\StringTok{"; mtry = "}\NormalTok{, }
-\NormalTok{    mtry, }\AttributeTok{sep =} \StringTok{""}\NormalTok{)) }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{ggplot}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ mean, }\AttributeTok{y =} \FunctionTok{reorder}\NormalTok{(label, }
-\NormalTok{    mean))) }\SpecialCharTok{+} \FunctionTok{geom\_point}\NormalTok{() }\SpecialCharTok{+} \FunctionTok{geom\_errorbar}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{xmin =}\NormalTok{ lower, }
-    \AttributeTok{xmax =}\NormalTok{ upper)) }\SpecialCharTok{+} \FunctionTok{theme\_bw}\NormalTok{() }\SpecialCharTok{+} \FunctionTok{scale\_y\_discrete}\NormalTok{(}\StringTok{""}\NormalTok{) }\SpecialCharTok{+} \FunctionTok{scale\_x\_continuous}\NormalTok{(}\StringTok{"Overall Accuracy"}\NormalTok{, }
-    \AttributeTok{labels =}\NormalTok{ scales}\SpecialCharTok{::}\NormalTok{percent) }\SpecialCharTok{+} \FunctionTok{ggtitle}\NormalTok{(}\StringTok{"Random Forest (No resampling)"}\NormalTok{)}
+\CommentTok{# RANDOM FOREST}
+\CommentTok{# No resampling}
+\KeywordTok{tic}\NormalTok{()}
+\NormalTok{rfMCMC.none.gridsearch <-}\StringTok{ }\KeywordTok{rfMCMC}\NormalTok{(}\DataTypeTok{samplingMethod =} \StringTok{"none"}\NormalTok{, }
+                                   \DataTypeTok{nUndersample =} \OtherTok{NA}\NormalTok{, }
+                                   \DataTypeTok{kOversample =} \OtherTok{NA}\NormalTok{,}
+                                   \DataTypeTok{trainPct =} \FloatTok{0.7}\NormalTok{, }
+                                   \DataTypeTok{B =}\NormalTok{ setB, }
+                                   \DataTypeTok{ntree =} \KeywordTok{seq}\NormalTok{(}\DecValTok{200}\NormalTok{, }\DecValTok{800}\NormalTok{, }\DecValTok{200}\NormalTok{), }
+                                   \DataTypeTok{mtry =} \KeywordTok{seq}\NormalTok{(}\DecValTok{2}\NormalTok{,}\DecValTok{10}\NormalTok{,}\DecValTok{2}\NormalTok{) }\CommentTok{# Default should be 4}
+\NormalTok{                                 )}
+\KeywordTok{toc}\NormalTok{()}
+\NormalTok{rfMCMC.none.gridsearch <-}\StringTok{ }\NormalTok{rfMCMC.none.gridsearch }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{filter}\NormalTok{(accuracyGroup }\OperatorTok{==}\StringTok{ "accuracy.all"}\NormalTok{) }\OperatorTok{%>%}
+\StringTok{  }\KeywordTok{arrange}\NormalTok{(}\OperatorTok{-}\NormalTok{mean)}
+\NormalTok{rfMCMC.none.gridsearch }
+\CommentTok{# write.csv(rfMCMC.none.gridsearch, file = "reports/rfMCMC.none.gridsearch.csv", row.names = F, na = "")}
+\NormalTok{rfMCMC.none.gridsearch.plot <-}\StringTok{ }\NormalTok{rfMCMC.none.gridsearch[}\KeywordTok{c}\NormalTok{(}\DecValTok{0}\OperatorTok{:}\DecValTok{10}\NormalTok{),] }\OperatorTok{%>%}
+\StringTok{  }\KeywordTok{mutate}\NormalTok{(}\DataTypeTok{label =} \KeywordTok{paste}\NormalTok{(}\StringTok{"Ntree = "}\NormalTok{, ntree, }\StringTok{"; mtry = "}\NormalTok{, mtry, }\DataTypeTok{sep =} \StringTok{""}\NormalTok{)) }\OperatorTok{%>%}
+\StringTok{  }\KeywordTok{ggplot}\NormalTok{(}\KeywordTok{aes}\NormalTok{(}\DataTypeTok{x =}\NormalTok{ mean, }\DataTypeTok{y =} \KeywordTok{reorder}\NormalTok{(label, mean))) }\OperatorTok{+}
+\StringTok{  }\KeywordTok{geom_point}\NormalTok{() }\OperatorTok{+}
+\StringTok{  }\KeywordTok{geom_errorbar}\NormalTok{(}\KeywordTok{aes}\NormalTok{(}\DataTypeTok{xmin =}\NormalTok{ lower, }\DataTypeTok{xmax =}\NormalTok{ upper)) }\OperatorTok{+}
+\StringTok{  }\KeywordTok{theme_bw}\NormalTok{() }\OperatorTok{+}
+\StringTok{  }\KeywordTok{scale_y_discrete}\NormalTok{(}\StringTok{""}\NormalTok{) }\OperatorTok{+}
+\StringTok{  }\KeywordTok{scale_x_continuous}\NormalTok{(}\StringTok{"Overall Accuracy"}\NormalTok{, }\DataTypeTok{labels =}\NormalTok{ scales}\OperatorTok{::}\NormalTok{percent) }\OperatorTok{+}
+\StringTok{  }\KeywordTok{ggtitle}\NormalTok{(}\StringTok{"Random Forest (No resampling)"}\NormalTok{)}
 \NormalTok{rfMCMC.none.gridsearch.plot}
-\CommentTok{\# Undersample}
-\FunctionTok{tic}\NormalTok{()}
-\NormalTok{rfMCMC.undersample.gridsearch }\OtherTok{\textless{}{-}} \FunctionTok{rfMCMC}\NormalTok{(}\AttributeTok{samplingMethod =} \StringTok{"undersample"}\NormalTok{, }
-    \AttributeTok{nUndersample =} \FunctionTok{seq}\NormalTok{(}\DecValTok{1000}\NormalTok{, }\DecValTok{2000}\NormalTok{, }\DecValTok{500}\NormalTok{), }\AttributeTok{kOversample =} \ConstantTok{NA}\NormalTok{, }\AttributeTok{trainPct =} \FloatTok{0.7}\NormalTok{, }
-    \AttributeTok{B =}\NormalTok{ setB, }\AttributeTok{ntree =} \FunctionTok{seq}\NormalTok{(}\DecValTok{200}\NormalTok{, }\DecValTok{800}\NormalTok{, }\DecValTok{200}\NormalTok{), }\AttributeTok{mtry =} \FunctionTok{seq}\NormalTok{(}\DecValTok{2}\NormalTok{, }\DecValTok{10}\NormalTok{, }\DecValTok{2}\NormalTok{)  }\CommentTok{\# Default should be 4}
+\CommentTok{# Undersample}
+\KeywordTok{tic}\NormalTok{()}
+\NormalTok{rfMCMC.undersample.gridsearch <-}\StringTok{ }\KeywordTok{rfMCMC}\NormalTok{(}\DataTypeTok{samplingMethod =} \StringTok{"undersample"}\NormalTok{, }
+                                 \DataTypeTok{nUndersample =} \KeywordTok{seq}\NormalTok{(}\DecValTok{1000}\NormalTok{, }\DecValTok{2000}\NormalTok{, }\DecValTok{500}\NormalTok{), }
+                                 \DataTypeTok{kOversample =} \OtherTok{NA}\NormalTok{,}
+                                 \DataTypeTok{trainPct =} \FloatTok{0.7}\NormalTok{, }
+                                 \DataTypeTok{B =}\NormalTok{ setB, }
+                                 \DataTypeTok{ntree =} \KeywordTok{seq}\NormalTok{(}\DecValTok{200}\NormalTok{, }\DecValTok{800}\NormalTok{, }\DecValTok{200}\NormalTok{), }
+                                 \DataTypeTok{mtry =} \KeywordTok{seq}\NormalTok{(}\DecValTok{2}\NormalTok{,}\DecValTok{10}\NormalTok{,}\DecValTok{2}\NormalTok{) }\CommentTok{# Default should be 4}
 \NormalTok{)}
-\FunctionTok{toc}\NormalTok{()}
-\NormalTok{rfMCMC.undersample.gridsearch }\OtherTok{\textless{}{-}}\NormalTok{ rfMCMC.undersample.gridsearch }\SpecialCharTok{\%\textgreater{}\%} 
-    \FunctionTok{filter}\NormalTok{(accuracyGroup }\SpecialCharTok{==} \StringTok{"accuracy.all"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{arrange}\NormalTok{(}\SpecialCharTok{{-}}\NormalTok{mean)}
-\NormalTok{rfMCMC.undersample.gridsearch}
-\CommentTok{\# write.csv(rfMCMC.undersample.gridsearch, file =}
-\CommentTok{\# \textquotesingle{}reports/rfMCMC.undersample.gridsearch.csv\textquotesingle{}, row.names = F,}
-\CommentTok{\# na = \textquotesingle{}\textquotesingle{})}
-\NormalTok{rfMCMC.undersample.gridsearch.plot }\OtherTok{\textless{}{-}}\NormalTok{ rfMCMC.undersample.gridsearch[}\FunctionTok{c}\NormalTok{(}\DecValTok{0}\SpecialCharTok{:}\DecValTok{10}\NormalTok{), }
-\NormalTok{    ] }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{mutate}\NormalTok{(}\AttributeTok{label =} \FunctionTok{paste}\NormalTok{(}\StringTok{"Ntree = "}\NormalTok{, ntree, }\StringTok{"; mtry = "}\NormalTok{, }
-\NormalTok{    mtry, }\StringTok{" (N = "}\NormalTok{, nUndersample, }\StringTok{")"}\NormalTok{, }\AttributeTok{sep =} \StringTok{""}\NormalTok{)) }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{ggplot}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ mean, }
-    \AttributeTok{y =} \FunctionTok{reorder}\NormalTok{(label, mean))) }\SpecialCharTok{+} \FunctionTok{geom\_point}\NormalTok{() }\SpecialCharTok{+} \FunctionTok{geom\_errorbar}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{xmin =}\NormalTok{ lower, }
-    \AttributeTok{xmax =}\NormalTok{ upper)) }\SpecialCharTok{+} \FunctionTok{theme\_bw}\NormalTok{() }\SpecialCharTok{+} \FunctionTok{scale\_y\_discrete}\NormalTok{(}\StringTok{""}\NormalTok{) }\SpecialCharTok{+} \FunctionTok{scale\_x\_continuous}\NormalTok{(}\StringTok{"Overall Accuracy"}\NormalTok{, }
-    \AttributeTok{labels =}\NormalTok{ scales}\SpecialCharTok{::}\NormalTok{percent) }\SpecialCharTok{+} \FunctionTok{ggtitle}\NormalTok{(}\StringTok{"Random Forest (Undersampling)"}\NormalTok{)}
+\KeywordTok{toc}\NormalTok{()}
+\NormalTok{rfMCMC.undersample.gridsearch <-}\StringTok{ }\NormalTok{rfMCMC.undersample.gridsearch }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{filter}\NormalTok{(accuracyGroup }\OperatorTok{==}\StringTok{ "accuracy.all"}\NormalTok{) }\OperatorTok{%>%}
+\StringTok{  }\KeywordTok{arrange}\NormalTok{(}\OperatorTok{-}\NormalTok{mean)}
+\NormalTok{rfMCMC.undersample.gridsearch }
+\CommentTok{# write.csv(rfMCMC.undersample.gridsearch, file = "reports/rfMCMC.undersample.gridsearch.csv", row.names = F, na = "")}
+\NormalTok{rfMCMC.undersample.gridsearch.plot <-}\StringTok{ }\NormalTok{rfMCMC.undersample.gridsearch[}\KeywordTok{c}\NormalTok{(}\DecValTok{0}\OperatorTok{:}\DecValTok{10}\NormalTok{),] }\OperatorTok{%>%}
+\StringTok{  }\KeywordTok{mutate}\NormalTok{(}\DataTypeTok{label =} \KeywordTok{paste}\NormalTok{(}\StringTok{"Ntree = "}\NormalTok{, ntree, }\StringTok{"; mtry = "}\NormalTok{, mtry, }\StringTok{" (N = "}\NormalTok{, nUndersample, }\StringTok{")"}\NormalTok{, }\DataTypeTok{sep =} \StringTok{""}\NormalTok{)) }\OperatorTok{%>%}
+\StringTok{  }\KeywordTok{ggplot}\NormalTok{(}\KeywordTok{aes}\NormalTok{(}\DataTypeTok{x =}\NormalTok{ mean, }\DataTypeTok{y =} \KeywordTok{reorder}\NormalTok{(label, mean))) }\OperatorTok{+}
+\StringTok{  }\KeywordTok{geom_point}\NormalTok{() }\OperatorTok{+}
+\StringTok{  }\KeywordTok{geom_errorbar}\NormalTok{(}\KeywordTok{aes}\NormalTok{(}\DataTypeTok{xmin =}\NormalTok{ lower, }\DataTypeTok{xmax =}\NormalTok{ upper)) }\OperatorTok{+}
+\StringTok{  }\KeywordTok{theme_bw}\NormalTok{() }\OperatorTok{+}
+\StringTok{  }\KeywordTok{scale_y_discrete}\NormalTok{(}\StringTok{""}\NormalTok{) }\OperatorTok{+}
+\StringTok{  }\KeywordTok{scale_x_continuous}\NormalTok{(}\StringTok{"Overall Accuracy"}\NormalTok{, }\DataTypeTok{labels =}\NormalTok{ scales}\OperatorTok{::}\NormalTok{percent) }\OperatorTok{+}
+\StringTok{  }\KeywordTok{ggtitle}\NormalTok{(}\StringTok{"Random Forest (Undersampling)"}\NormalTok{)}
 \NormalTok{rfMCMC.undersample.gridsearch.plot}
-\CommentTok{\# Oversample}
-\FunctionTok{tic}\NormalTok{()}
-\NormalTok{rfMCMC.oversample.gridsearch }\OtherTok{\textless{}{-}} \FunctionTok{rfMCMC}\NormalTok{(}\AttributeTok{samplingMethod =} \StringTok{"oversample"}\NormalTok{, }
-    \AttributeTok{nUndersample =} \ConstantTok{NA}\NormalTok{, }\AttributeTok{kOversample =} \FunctionTok{seq}\NormalTok{(}\DecValTok{3}\NormalTok{, }\DecValTok{7}\NormalTok{, }\DecValTok{2}\NormalTok{), }\AttributeTok{trainPct =} \FloatTok{0.7}\NormalTok{, }
-    \AttributeTok{B =}\NormalTok{ setB, }\AttributeTok{ntree =} \FunctionTok{seq}\NormalTok{(}\DecValTok{200}\NormalTok{, }\DecValTok{800}\NormalTok{, }\DecValTok{200}\NormalTok{), }\AttributeTok{mtry =} \FunctionTok{seq}\NormalTok{(}\DecValTok{2}\NormalTok{, }\DecValTok{10}\NormalTok{, }\DecValTok{2}\NormalTok{)  }\CommentTok{\# Default should be 4}
+\CommentTok{# Oversample}
+\KeywordTok{tic}\NormalTok{()}
+\NormalTok{rfMCMC.oversample.gridsearch <-}\StringTok{ }\KeywordTok{rfMCMC}\NormalTok{(}\DataTypeTok{samplingMethod =} \StringTok{"oversample"}\NormalTok{, }
+                                 \DataTypeTok{nUndersample =} \OtherTok{NA}\NormalTok{, }
+                                 \DataTypeTok{kOversample =} \KeywordTok{seq}\NormalTok{(}\DecValTok{3}\NormalTok{,}\DecValTok{7}\NormalTok{,}\DecValTok{2}\NormalTok{),}
+                                 \DataTypeTok{trainPct =} \FloatTok{0.7}\NormalTok{, }
+                                 \DataTypeTok{B =}\NormalTok{ setB, }
+                                 \DataTypeTok{ntree =} \KeywordTok{seq}\NormalTok{(}\DecValTok{200}\NormalTok{, }\DecValTok{800}\NormalTok{, }\DecValTok{200}\NormalTok{), }
+                                 \DataTypeTok{mtry =} \KeywordTok{seq}\NormalTok{(}\DecValTok{2}\NormalTok{,}\DecValTok{10}\NormalTok{,}\DecValTok{2}\NormalTok{) }\CommentTok{# Default should be 4}
 \NormalTok{)}
-\FunctionTok{toc}\NormalTok{()}
-\NormalTok{rfMCMC.oversample.gridsearch }\OtherTok{\textless{}{-}}\NormalTok{ rfMCMC.oversample.gridsearch }\SpecialCharTok{\%\textgreater{}\%} 
-    \FunctionTok{filter}\NormalTok{(accuracyGroup }\SpecialCharTok{==} \StringTok{"accuracy.all"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{arrange}\NormalTok{(}\SpecialCharTok{{-}}\NormalTok{mean)}
-\NormalTok{rfMCMC.oversample.gridsearch}
-\CommentTok{\# write.csv(rfMCMC.oversample.gridsearch, file =}
-\CommentTok{\# \textquotesingle{}reports/rfMCMC.oversample.gridsearch.csv\textquotesingle{}, row.names = F,}
-\CommentTok{\# na = \textquotesingle{}\textquotesingle{})}
-\NormalTok{rfMCMC.oversample.gridsearch.plot }\OtherTok{\textless{}{-}}\NormalTok{ rfMCMC.oversample.gridsearch[}\FunctionTok{c}\NormalTok{(}\DecValTok{0}\SpecialCharTok{:}\DecValTok{10}\NormalTok{), }
-\NormalTok{    ] }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{mutate}\NormalTok{(}\AttributeTok{label =} \FunctionTok{paste}\NormalTok{(}\StringTok{"Ntree = "}\NormalTok{, ntree, }\StringTok{"; mtry = "}\NormalTok{, }
-\NormalTok{    mtry, }\StringTok{" (k = "}\NormalTok{, kOversample, }\StringTok{")"}\NormalTok{, }\AttributeTok{sep =} \StringTok{""}\NormalTok{)) }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{ggplot}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ mean, }
-    \AttributeTok{y =} \FunctionTok{reorder}\NormalTok{(label, mean))) }\SpecialCharTok{+} \FunctionTok{geom\_point}\NormalTok{() }\SpecialCharTok{+} \FunctionTok{geom\_errorbar}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{xmin =}\NormalTok{ lower, }
-    \AttributeTok{xmax =}\NormalTok{ upper)) }\SpecialCharTok{+} \FunctionTok{theme\_bw}\NormalTok{() }\SpecialCharTok{+} \FunctionTok{scale\_y\_discrete}\NormalTok{(}\StringTok{""}\NormalTok{) }\SpecialCharTok{+} \FunctionTok{scale\_x\_continuous}\NormalTok{(}\StringTok{"Overall Accuracy"}\NormalTok{, }
-    \AttributeTok{labels =}\NormalTok{ scales}\SpecialCharTok{::}\NormalTok{percent) }\SpecialCharTok{+} \FunctionTok{ggtitle}\NormalTok{(}\StringTok{"Random Forest (Oversampling)"}\NormalTok{)}
+\KeywordTok{toc}\NormalTok{()}
+\NormalTok{rfMCMC.oversample.gridsearch <-}\StringTok{ }\NormalTok{rfMCMC.oversample.gridsearch }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{filter}\NormalTok{(accuracyGroup }\OperatorTok{==}\StringTok{ "accuracy.all"}\NormalTok{) }\OperatorTok{%>%}
+\StringTok{  }\KeywordTok{arrange}\NormalTok{(}\OperatorTok{-}\NormalTok{mean)}
+\NormalTok{rfMCMC.oversample.gridsearch }
+\CommentTok{# write.csv(rfMCMC.oversample.gridsearch, file = "reports/rfMCMC.oversample.gridsearch.csv", row.names = F, na = "")}
+\NormalTok{rfMCMC.oversample.gridsearch.plot <-}\StringTok{ }\NormalTok{rfMCMC.oversample.gridsearch[}\KeywordTok{c}\NormalTok{(}\DecValTok{0}\OperatorTok{:}\DecValTok{10}\NormalTok{),] }\OperatorTok{%>%}
+\StringTok{  }\KeywordTok{mutate}\NormalTok{(}\DataTypeTok{label =} \KeywordTok{paste}\NormalTok{(}\StringTok{"Ntree = "}\NormalTok{, ntree, }\StringTok{"; mtry = "}\NormalTok{, mtry, }\StringTok{" (k = "}\NormalTok{, kOversample, }\StringTok{")"}\NormalTok{, }\DataTypeTok{sep =} \StringTok{""}\NormalTok{)) }\OperatorTok{%>%}
+\StringTok{  }\KeywordTok{ggplot}\NormalTok{(}\KeywordTok{aes}\NormalTok{(}\DataTypeTok{x =}\NormalTok{ mean, }\DataTypeTok{y =} \KeywordTok{reorder}\NormalTok{(label, mean))) }\OperatorTok{+}
+\StringTok{  }\KeywordTok{geom_point}\NormalTok{() }\OperatorTok{+}
+\StringTok{  }\KeywordTok{geom_errorbar}\NormalTok{(}\KeywordTok{aes}\NormalTok{(}\DataTypeTok{xmin =}\NormalTok{ lower, }\DataTypeTok{xmax =}\NormalTok{ upper)) }\OperatorTok{+}
+\StringTok{  }\KeywordTok{theme_bw}\NormalTok{() }\OperatorTok{+}
+\StringTok{  }\KeywordTok{scale_y_discrete}\NormalTok{(}\StringTok{""}\NormalTok{) }\OperatorTok{+}
+\StringTok{  }\KeywordTok{scale_x_continuous}\NormalTok{(}\StringTok{"Overall Accuracy"}\NormalTok{, }\DataTypeTok{labels =}\NormalTok{ scales}\OperatorTok{::}\NormalTok{percent) }\OperatorTok{+}
+\StringTok{  }\KeywordTok{ggtitle}\NormalTok{(}\StringTok{"Random Forest (Oversampling)"}\NormalTok{)}
 \NormalTok{rfMCMC.oversample.gridsearch.plot}
-
-\CommentTok{\# FINAL RESULTS}
-\CommentTok{\# {-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-} XGBOOST MCMC}
-\CommentTok{\# RESULTS}
-\NormalTok{setB }\OtherTok{=} \DecValTok{100}
-\FunctionTok{tic}\NormalTok{()}
-\NormalTok{xgbMCMC.none.results }\OtherTok{\textless{}{-}} \FunctionTok{xgbMCMC}\NormalTok{(}\AttributeTok{samplingMethod =} \StringTok{"none"}\NormalTok{, }\AttributeTok{nUndersample =} \ConstantTok{NA}\NormalTok{, }
-    \AttributeTok{kOversample =} \ConstantTok{NA}\NormalTok{, }\AttributeTok{trainPct =} \FloatTok{0.7}\NormalTok{, }\AttributeTok{B =}\NormalTok{ setB, }\AttributeTok{max.depth =} \DecValTok{50}\NormalTok{, }
-    \AttributeTok{eta =} \FloatTok{0.75}\NormalTok{, }\AttributeTok{nround =} \DecValTok{12}\NormalTok{, }\AttributeTok{nthread =} \DecValTok{8}\NormalTok{)}
-\FunctionTok{toc}\NormalTok{()}
-\FunctionTok{tic}\NormalTok{()}
-\NormalTok{xgbMCMC.undersample.results }\OtherTok{\textless{}{-}} \FunctionTok{xgbMCMC}\NormalTok{(}\AttributeTok{samplingMethod =} \StringTok{"undersample"}\NormalTok{, }
-    \AttributeTok{nUndersample =} \DecValTok{1000}\NormalTok{, }\AttributeTok{kOversample =} \ConstantTok{NA}\NormalTok{, }\AttributeTok{trainPct =} \FloatTok{0.7}\NormalTok{, }\AttributeTok{B =}\NormalTok{ setB, }
-    \AttributeTok{max.depth =} \DecValTok{50}\NormalTok{, }\AttributeTok{eta =} \FloatTok{0.1}\NormalTok{, }\AttributeTok{nround =} \DecValTok{2}\NormalTok{, }\AttributeTok{nthread =} \DecValTok{2}\NormalTok{)}
-\FunctionTok{toc}\NormalTok{()}
-\FunctionTok{tic}\NormalTok{()}
-\NormalTok{xgbMCMC.oversample.results }\OtherTok{\textless{}{-}} \FunctionTok{xgbMCMC}\NormalTok{(}\AttributeTok{samplingMethod =} \StringTok{"oversample"}\NormalTok{, }
-    \AttributeTok{nUndersample =} \ConstantTok{NA}\NormalTok{, }\AttributeTok{kOversample =} \DecValTok{3}\NormalTok{, }\AttributeTok{trainPct =} \FloatTok{0.7}\NormalTok{, }\AttributeTok{B =}\NormalTok{ setB, }
-    \AttributeTok{max.depth =} \DecValTok{50}\NormalTok{, }\AttributeTok{eta =} \FloatTok{0.1}\NormalTok{, }\AttributeTok{nround =} \DecValTok{2}\NormalTok{, }\AttributeTok{nthread =} \DecValTok{2}\NormalTok{)}
-\FunctionTok{toc}\NormalTok{()}
-\NormalTok{xgbMCMC.results }\OtherTok{\textless{}{-}} \FunctionTok{rbind}\NormalTok{(xgbMCMC.none.results, xgbMCMC.undersample.results, }
-\NormalTok{    xgbMCMC.oversample.results) }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{mutate}\NormalTok{(}\AttributeTok{label =} \FunctionTok{paste}\NormalTok{(}\StringTok{"Max Depth = "}\NormalTok{, }
-\NormalTok{    max.depth, }\StringTok{"; Eta = "}\NormalTok{, eta, }\AttributeTok{sep =} \StringTok{""}\NormalTok{)) }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{select}\NormalTok{(}\SpecialCharTok{{-}}\NormalTok{max.depth, }
-    \SpecialCharTok{{-}}\NormalTok{eta, }\SpecialCharTok{{-}}\NormalTok{nround, }\SpecialCharTok{{-}}\NormalTok{nthread)}
-\CommentTok{\# RANDOM FORST MCMC RESULTS}
-\FunctionTok{tic}\NormalTok{()}
-\NormalTok{rfMCMC.none.results }\OtherTok{\textless{}{-}} \FunctionTok{rfMCMC}\NormalTok{(}\AttributeTok{B =}\NormalTok{ setB, }\AttributeTok{samplingMethod =} \StringTok{"none"}\NormalTok{, }
-    \AttributeTok{nUndersample =} \ConstantTok{NA}\NormalTok{, }\AttributeTok{kOversample =} \ConstantTok{NA}\NormalTok{, }\AttributeTok{trainPct =} \FloatTok{0.7}\NormalTok{, }\AttributeTok{ntree =} \DecValTok{200}\NormalTok{, }
-    \AttributeTok{mtry =} \DecValTok{2}\NormalTok{)}
-\FunctionTok{toc}\NormalTok{()}
-\FunctionTok{tic}\NormalTok{()}
-\NormalTok{rfMCMC.undersample.results }\OtherTok{\textless{}{-}} \FunctionTok{rfMCMC}\NormalTok{(}\AttributeTok{B =}\NormalTok{ setB, }\AttributeTok{samplingMethod =} \StringTok{"undersample"}\NormalTok{, }
-    \AttributeTok{nUndersample =} \DecValTok{2000}\NormalTok{, }\AttributeTok{kOversample =} \ConstantTok{NA}\NormalTok{, }\AttributeTok{trainPct =} \FloatTok{0.7}\NormalTok{, }\AttributeTok{ntree =} \DecValTok{800}\NormalTok{, }
-    \AttributeTok{mtry =} \DecValTok{2}\NormalTok{)}
-\FunctionTok{toc}\NormalTok{()}
-\FunctionTok{tic}\NormalTok{()}
-\NormalTok{rfMCMC.oversample.results }\OtherTok{\textless{}{-}} \FunctionTok{rfMCMC}\NormalTok{(}\AttributeTok{B =}\NormalTok{ setB, }\AttributeTok{samplingMethod =} \StringTok{"oversample"}\NormalTok{, }
-    \AttributeTok{nUndersample =} \ConstantTok{NA}\NormalTok{, }\AttributeTok{kOversample =} \DecValTok{3}\NormalTok{, }\AttributeTok{trainPct =} \FloatTok{0.7}\NormalTok{, }\AttributeTok{ntree =} \DecValTok{200}\NormalTok{, }
-    \AttributeTok{mtry =} \DecValTok{3}\NormalTok{)}
-\FunctionTok{toc}\NormalTok{()}
-\NormalTok{rfMCMC.results }\OtherTok{\textless{}{-}} \FunctionTok{rbind}\NormalTok{(rfMCMC.none.results, rfMCMC.undersample.results, }
-\NormalTok{    rfMCMC.oversample.results) }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{mutate}\NormalTok{(}\AttributeTok{label =} \FunctionTok{paste}\NormalTok{(}\StringTok{"N Trees = "}\NormalTok{, }
-\NormalTok{    ntree, }\StringTok{"; Mtry = "}\NormalTok{, mtry, }\AttributeTok{sep =} \StringTok{""}\NormalTok{)) }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{select}\NormalTok{(}\SpecialCharTok{{-}}\NormalTok{ntree, }\SpecialCharTok{{-}}\NormalTok{mtry)}
-\CommentTok{\# COMBINE XGBOOST AND RANDOM FOREST RESULTS \& PLOT}
-\NormalTok{MCMC.results }\OtherTok{\textless{}{-}} \FunctionTok{rbind}\NormalTok{(xgbMCMC.results, rfMCMC.results)}
-\FunctionTok{write.csv}\NormalTok{(MCMC.results, }\StringTok{"reports/MCMC.results.csv"}\NormalTok{, }\AttributeTok{row.names =}\NormalTok{ F, }
-    \AttributeTok{na =} \StringTok{""}\NormalTok{)}
-\NormalTok{MCMC.results }\OtherTok{\textless{}{-}} \FunctionTok{read\_csv}\NormalTok{(}\StringTok{"reports/MCMC.results.csv"}\NormalTok{)}
-\CommentTok{\# new facet labels}
-\NormalTok{accuracyGroup.labs }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}\StringTok{"Overall"}\NormalTok{, }\StringTok{"Low Quality"}\NormalTok{, }\StringTok{"Normal Quality"}\NormalTok{, }
-    \StringTok{"High Quality"}\NormalTok{)}
-\FunctionTok{names}\NormalTok{(accuracyGroup.labs) }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}\StringTok{"accuracy.all"}\NormalTok{, }\StringTok{"accuracy.low"}\NormalTok{, }
-    \StringTok{"accuracy.normal"}\NormalTok{, }\StringTok{"accuracy.high"}\NormalTok{)}
-\CommentTok{\# plot accuracy}
-\NormalTok{MCMC.results }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{mutate}\NormalTok{(}\AttributeTok{samplingMethod =} \FunctionTok{factor}\NormalTok{(samplingMethod, }
-    \AttributeTok{levels =} \FunctionTok{c}\NormalTok{(}\StringTok{"none"}\NormalTok{, }\StringTok{"undersample"}\NormalTok{, }\StringTok{"oversample"}\NormalTok{)), }\AttributeTok{accuracyGroup =} \FunctionTok{factor}\NormalTok{(accuracyGroup, }
-    \AttributeTok{levels =} \FunctionTok{c}\NormalTok{(}\StringTok{"accuracy.all"}\NormalTok{, }\StringTok{"accuracy.low"}\NormalTok{, }\StringTok{"accuracy.normal"}\NormalTok{, }
-        \StringTok{"accuracy.high"}\NormalTok{))) }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{ggplot}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ mean, }\AttributeTok{y =}\NormalTok{ samplingMethod, }
-    \AttributeTok{group =}\NormalTok{ Method, }\AttributeTok{color =}\NormalTok{ Method)) }\SpecialCharTok{+} \FunctionTok{geom\_point}\NormalTok{(}\AttributeTok{size =} \DecValTok{1}\NormalTok{, }\AttributeTok{position =} \FunctionTok{position\_dodge}\NormalTok{(}\AttributeTok{width =} \FloatTok{0.5}\NormalTok{)) }\SpecialCharTok{+} 
-    \FunctionTok{geom\_errorbar}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{xmin =}\NormalTok{ lower, }\AttributeTok{xmax =}\NormalTok{ upper), }\AttributeTok{position =} \FunctionTok{position\_dodge}\NormalTok{(}\AttributeTok{width =} \FloatTok{0.5}\NormalTok{), }
-        \AttributeTok{width =} \FloatTok{0.4}\NormalTok{) }\SpecialCharTok{+} \FunctionTok{facet\_wrap}\NormalTok{(}\SpecialCharTok{\textasciitilde{}}\NormalTok{accuracyGroup, }\AttributeTok{ncol =} \DecValTok{1}\NormalTok{, }\AttributeTok{labeller =} \FunctionTok{labeller}\NormalTok{(}\AttributeTok{accuracyGroup =}\NormalTok{ accuracyGroup.labs)) }\SpecialCharTok{+} 
-    \FunctionTok{theme\_bw}\NormalTok{() }\SpecialCharTok{+} \FunctionTok{theme}\NormalTok{(}\AttributeTok{aspect.ratio =} \FloatTok{0.2}\NormalTok{) }\SpecialCharTok{+} \FunctionTok{scale\_y\_discrete}\NormalTok{(}\StringTok{"Resampling Method"}\NormalTok{) }\SpecialCharTok{+} 
-    \FunctionTok{scale\_x\_continuous}\NormalTok{(}\StringTok{"Accuracy"}\NormalTok{, }\AttributeTok{limits =} \FunctionTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{, }\DecValTok{1}\NormalTok{), }\AttributeTok{breaks =} \FunctionTok{seq}\NormalTok{(}\DecValTok{0}\NormalTok{, }
-        \DecValTok{1}\NormalTok{, }\FloatTok{0.2}\NormalTok{), }\AttributeTok{labels =}\NormalTok{ scales}\SpecialCharTok{::}\NormalTok{percent) }\SpecialCharTok{+} \FunctionTok{scale\_color\_brewer}\NormalTok{(}\StringTok{""}\NormalTok{, }
-    \AttributeTok{palette =} \StringTok{"Paired"}\NormalTok{)}
+  
+\CommentTok{# FINAL RESULTS ----------------------------------------------}
+\CommentTok{# XGBOOST MCMC RESULTS}
+\NormalTok{setB =}\StringTok{ }\DecValTok{100}
+\KeywordTok{tic}\NormalTok{()}
+\NormalTok{xgbMCMC.none.results <-}\StringTok{ }\KeywordTok{xgbMCMC}\NormalTok{(}\DataTypeTok{samplingMethod =} \StringTok{"none"}\NormalTok{, }\DataTypeTok{nUndersample =} \OtherTok{NA}\NormalTok{, }\DataTypeTok{kOversample =} \OtherTok{NA}\NormalTok{,}
+                                \DataTypeTok{trainPct =} \FloatTok{0.7}\NormalTok{, }\DataTypeTok{B =}\NormalTok{ setB, }\DataTypeTok{max.depth =} \DecValTok{50}\NormalTok{, }\DataTypeTok{eta =} \FloatTok{0.75}\NormalTok{, }\DataTypeTok{nround =} \DecValTok{12}\NormalTok{, }\DataTypeTok{nthread =} \DecValTok{8}\NormalTok{)}
+\KeywordTok{toc}\NormalTok{()}
+\KeywordTok{tic}\NormalTok{()}
+\NormalTok{xgbMCMC.undersample.results <-}\StringTok{ }\KeywordTok{xgbMCMC}\NormalTok{(}\DataTypeTok{samplingMethod =} \StringTok{"undersample"}\NormalTok{, }\DataTypeTok{nUndersample =} \DecValTok{1000}\NormalTok{, }\DataTypeTok{kOversample =} \OtherTok{NA}\NormalTok{,}
+                                       \DataTypeTok{trainPct =} \FloatTok{0.7}\NormalTok{, }\DataTypeTok{B =}\NormalTok{ setB, }\DataTypeTok{max.depth =} \DecValTok{50}\NormalTok{, }\DataTypeTok{eta =} \FloatTok{0.10}\NormalTok{, }\DataTypeTok{nround =} \DecValTok{2}\NormalTok{, }\DataTypeTok{nthread =} \DecValTok{2}\NormalTok{)}
+\KeywordTok{toc}\NormalTok{()}
+\KeywordTok{tic}\NormalTok{()}
+\NormalTok{xgbMCMC.oversample.results <-}\StringTok{ }\KeywordTok{xgbMCMC}\NormalTok{(}\DataTypeTok{samplingMethod =} \StringTok{"oversample"}\NormalTok{, }\DataTypeTok{nUndersample =} \OtherTok{NA}\NormalTok{, }\DataTypeTok{kOversample =} \DecValTok{3}\NormalTok{,}
+                                      \DataTypeTok{trainPct =} \FloatTok{0.7}\NormalTok{, }\DataTypeTok{B =}\NormalTok{ setB, }\DataTypeTok{max.depth =} \DecValTok{50}\NormalTok{, }\DataTypeTok{eta =} \FloatTok{0.10}\NormalTok{, }\DataTypeTok{nround =} \DecValTok{2}\NormalTok{, }\DataTypeTok{nthread =} \DecValTok{2}\NormalTok{)}
+\KeywordTok{toc}\NormalTok{()}
+\NormalTok{xgbMCMC.results <-}\StringTok{ }\KeywordTok{rbind}\NormalTok{(xgbMCMC.none.results,}
+\NormalTok{                         xgbMCMC.undersample.results,}
+\NormalTok{                         xgbMCMC.oversample.results) }\OperatorTok{%>%}
+\StringTok{  }\KeywordTok{mutate}\NormalTok{(}\DataTypeTok{label =} \KeywordTok{paste}\NormalTok{(}\StringTok{"Max Depth = "}\NormalTok{, max.depth, }\StringTok{"; Eta = "}\NormalTok{, eta, }\DataTypeTok{sep =} \StringTok{""}\NormalTok{)) }\OperatorTok{%>%}
+\StringTok{  }\KeywordTok{select}\NormalTok{(}\OperatorTok{-}\NormalTok{max.depth, }\OperatorTok{-}\NormalTok{eta, }\OperatorTok{-}\NormalTok{nround, }\OperatorTok{-}\StringTok{ }\NormalTok{nthread)}
+\CommentTok{# RANDOM FORST MCMC RESULTS}
+\KeywordTok{tic}\NormalTok{()}
+\NormalTok{rfMCMC.none.results <-}\StringTok{ }\KeywordTok{rfMCMC}\NormalTok{(}\DataTypeTok{B =}\NormalTok{ setB, }\DataTypeTok{samplingMethod =} \StringTok{"none"}\NormalTok{, }\DataTypeTok{nUndersample =} \OtherTok{NA}\NormalTok{, }\DataTypeTok{kOversample =} \OtherTok{NA}\NormalTok{,}
+                              \DataTypeTok{trainPct =} \FloatTok{0.7}\NormalTok{, }\DataTypeTok{ntree =} \DecValTok{200}\NormalTok{, }\DataTypeTok{mtry =} \DecValTok{2}\NormalTok{)}
+\KeywordTok{toc}\NormalTok{()}
+\KeywordTok{tic}\NormalTok{()}
+\NormalTok{rfMCMC.undersample.results <-}\StringTok{ }\KeywordTok{rfMCMC}\NormalTok{(}\DataTypeTok{B =}\NormalTok{ setB, }\DataTypeTok{samplingMethod =} \StringTok{"undersample"}\NormalTok{, }\DataTypeTok{nUndersample =} \DecValTok{2000}\NormalTok{, }\DataTypeTok{kOversample =} \OtherTok{NA}\NormalTok{,}
+                                     \DataTypeTok{trainPct =} \FloatTok{0.7}\NormalTok{, }\DataTypeTok{ntree =} \DecValTok{800}\NormalTok{, }\DataTypeTok{mtry =} \DecValTok{2}\NormalTok{)}
+\KeywordTok{toc}\NormalTok{()}
+\KeywordTok{tic}\NormalTok{()}
+\NormalTok{rfMCMC.oversample.results <-}\StringTok{ }\KeywordTok{rfMCMC}\NormalTok{(}\DataTypeTok{B =}\NormalTok{ setB, }\DataTypeTok{samplingMethod =} \StringTok{"oversample"}\NormalTok{, }\DataTypeTok{nUndersample =} \OtherTok{NA}\NormalTok{, }\DataTypeTok{kOversample =} \DecValTok{3}\NormalTok{,}
+                                    \DataTypeTok{trainPct =} \FloatTok{0.7}\NormalTok{, }\DataTypeTok{ntree =} \DecValTok{200}\NormalTok{, }\DataTypeTok{mtry =} \DecValTok{3}\NormalTok{)}
+\KeywordTok{toc}\NormalTok{()}
+\NormalTok{rfMCMC.results <-}\StringTok{ }\KeywordTok{rbind}\NormalTok{(rfMCMC.none.results,}
+\NormalTok{                        rfMCMC.undersample.results,}
+\NormalTok{                        rfMCMC.oversample.results) }\OperatorTok{%>%}
+\StringTok{  }\KeywordTok{mutate}\NormalTok{(}\DataTypeTok{label =} \KeywordTok{paste}\NormalTok{(}\StringTok{"N Trees = "}\NormalTok{, ntree, }\StringTok{"; Mtry = "}\NormalTok{, mtry, }\DataTypeTok{sep =} \StringTok{""}\NormalTok{)) }\OperatorTok{%>%}
+\StringTok{  }\KeywordTok{select}\NormalTok{(}\OperatorTok{-}\NormalTok{ntree, }\OperatorTok{-}\NormalTok{mtry)}
+\CommentTok{# COMBINE XGBOOST AND RANDOM FOREST RESULTS & PLOT}
+\NormalTok{MCMC.results <-}\StringTok{ }\KeywordTok{rbind}\NormalTok{(xgbMCMC.results, rfMCMC.results)}
+\KeywordTok{write.csv}\NormalTok{(MCMC.results, }\StringTok{"reports/MCMC.results.csv"}\NormalTok{, }\DataTypeTok{row.names =}\NormalTok{ F, }\DataTypeTok{na =} \StringTok{""}\NormalTok{)}
+\NormalTok{MCMC.results <-}\StringTok{ }\KeywordTok{read_csv}\NormalTok{(}\StringTok{"reports/MCMC.results.csv"}\NormalTok{)}
+\CommentTok{# new facet labels}
+\NormalTok{accuracyGroup.labs <-}\StringTok{ }\KeywordTok{c}\NormalTok{(}\StringTok{"Overall"}\NormalTok{, }\StringTok{"Low Quality"}\NormalTok{, }\StringTok{"Normal Quality"}\NormalTok{, }\StringTok{"High Quality"}\NormalTok{)}
+\KeywordTok{names}\NormalTok{(accuracyGroup.labs) <-}\StringTok{ }\KeywordTok{c}\NormalTok{(}\StringTok{"accuracy.all"}\NormalTok{, }\StringTok{"accuracy.low"}\NormalTok{, }\StringTok{"accuracy.normal"}\NormalTok{, }\StringTok{"accuracy.high"}\NormalTok{)}
+\CommentTok{# plot accuracy}
+\NormalTok{MCMC.results }\OperatorTok{%>%}
+\StringTok{  }\KeywordTok{mutate}\NormalTok{(}\DataTypeTok{samplingMethod =} \KeywordTok{factor}\NormalTok{(samplingMethod, }\DataTypeTok{levels =} \KeywordTok{c}\NormalTok{(}\StringTok{"none"}\NormalTok{, }\StringTok{"undersample"}\NormalTok{, }\StringTok{"oversample"}\NormalTok{)),}
+         \DataTypeTok{accuracyGroup =} \KeywordTok{factor}\NormalTok{(accuracyGroup, }\DataTypeTok{levels =} \KeywordTok{c}\NormalTok{(}\StringTok{"accuracy.all"}\NormalTok{, }\StringTok{"accuracy.low"}\NormalTok{, }\StringTok{"accuracy.normal"}\NormalTok{, }\StringTok{"accuracy.high"}\NormalTok{))) }\OperatorTok{%>%}
+\StringTok{  }\KeywordTok{ggplot}\NormalTok{(}\KeywordTok{aes}\NormalTok{(}\DataTypeTok{x =}\NormalTok{ mean, }\DataTypeTok{y =}\NormalTok{ samplingMethod, }\DataTypeTok{group =}\NormalTok{ Method, }\DataTypeTok{color =}\NormalTok{ Method)) }\OperatorTok{+}
+\StringTok{  }\KeywordTok{geom_point}\NormalTok{(}\DataTypeTok{size =} \DecValTok{1}\NormalTok{, }\DataTypeTok{position =} \KeywordTok{position_dodge}\NormalTok{(}\DataTypeTok{width =} \FloatTok{0.5}\NormalTok{)) }\OperatorTok{+}
+\StringTok{  }\KeywordTok{geom_errorbar}\NormalTok{(}\KeywordTok{aes}\NormalTok{(}\DataTypeTok{xmin =}\NormalTok{ lower, }\DataTypeTok{xmax =}\NormalTok{ upper), }\DataTypeTok{position =} \KeywordTok{position_dodge}\NormalTok{(}\DataTypeTok{width =} \FloatTok{0.5}\NormalTok{), }\DataTypeTok{width =} \FloatTok{0.4}\NormalTok{) }\OperatorTok{+}
+\StringTok{  }\KeywordTok{facet_wrap}\NormalTok{(}\OperatorTok{~}\NormalTok{accuracyGroup, }\DataTypeTok{ncol =} \DecValTok{1}\NormalTok{, }\DataTypeTok{labeller =} \KeywordTok{labeller}\NormalTok{(}\DataTypeTok{accuracyGroup =}\NormalTok{ accuracyGroup.labs)) }\OperatorTok{+}
+\StringTok{  }\KeywordTok{theme_bw}\NormalTok{() }\OperatorTok{+}
+\StringTok{  }\KeywordTok{theme}\NormalTok{(}\DataTypeTok{aspect.ratio =} \FloatTok{0.2}\NormalTok{) }\OperatorTok{+}
+\StringTok{  }\KeywordTok{scale_y_discrete}\NormalTok{(}\StringTok{"Resampling Method"}\NormalTok{) }\OperatorTok{+}
+\StringTok{  }\KeywordTok{scale_x_continuous}\NormalTok{(}\StringTok{"Accuracy"}\NormalTok{, }\DataTypeTok{limits =} \KeywordTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{,}\DecValTok{1}\NormalTok{), }\DataTypeTok{breaks =} \KeywordTok{seq}\NormalTok{(}\DecValTok{0}\NormalTok{,}\DecValTok{1}\NormalTok{,}\FloatTok{0.2}\NormalTok{), }\DataTypeTok{labels =}\NormalTok{ scales}\OperatorTok{::}\NormalTok{percent) }\OperatorTok{+}
+\StringTok{  }\KeywordTok{scale_color_brewer}\NormalTok{(}\StringTok{""}\NormalTok{, }\DataTypeTok{palette =} \StringTok{"Paired"}\NormalTok{)}
 \end{Highlighting}
 \end{Shaded}
+
 \end{appendix}
