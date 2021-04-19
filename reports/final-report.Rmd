@@ -239,33 +239,31 @@ Both classification methods were tuned by conducting a hyperparameter grid searc
 
 ## Resampling Techniques
 
-Before we are able to consider the different classification methods, we must first examine the imbalanced issue in our data and develop our resampling techniques. 
-This is because typical classifier algorithms assume a relatively balanced distribution, so with imbalanced data there tends to be bias towards the majority class \citep{sun2009classification}. 
+Before we are able to consider the different classification methods, we must first examine the imbalanced issue in our data (Figure \ref{fig:class-distribution}) and develop our resampling techniques. 
+This is because typical classifier algorithms assume a relatively balanced distribution across the classes, so with imbalanced data there tends to be bias towards the majority class \citep{sun2009classification}. 
 Classification rules for the minority classes tend to be undiscovered or ignored, so the minority class is misclassified more often than the majority class. 
 If we were to look at our data set from a binary standpoint where “Low Quality” and “High Quality” were classified as "rare", and “Normal Quality” was classified as "not rare", the majority (not rare) class has 6053 observations, and the minority (rare) class has 444 observations, which is a ratio of about 13:1. 
-Due to this imbalanced nature in the data, classifying algorithms will be biased towards classifying wines as Normal Quality, causing poor predictions for the Low and High Quality classes. 
+Due to this imbalanced nature in the data, classifying algorithms will be biased towards classifying wines as "Normal", causing poor predictions for the "Low" and "High" quality classes. 
 When creating the resampled data sets, the binary classification of “rare” and “not rare” is used due to the resampling algorithms relying on a binary class designation.
 
-A method on how to deal with the imbalanced issue in the data is through resampling the original data set either by oversampling the majority class, or undersampling the minority class. 
-The goal with these methods is to create a data set that has close to a balanced class distribution, so the classifying algorithms will have better predictions, so it will predict to the minority class more accurately \citep{hoens2013imbalanced}. 
-The oversampling method involves replicating the minority class and creating synthetic data, or creating new instances using heuristics. 
-This method tends to have an overfitting problem, where it will predict the minority class more than it should. 
-The undersampling method removes instances from the majority class either randomly or using some heuristics. 
-Since data is being removed, potentially valuable information is not considered \citep{hu2016classification}. 
-To see how valuable resampling is in our data set, we ran the classifying algorithms with no resampling on the original imbalanced data set, randomly undersampling method, and SMOTE, which is an oversampling method. 
+A method on how to lower the effects on working with an imbalanced data set is through resampling the original data set either by either oversampling the majority class, or undersampling the minority class. 
+The goal with these methods is to create a data set that has close to a balanced class distribution, so the classifying algorithms will have better predictions due to being able to predict to the minority class more accurately \citep{hoens2013imbalanced}. 
+To see how valuable resampling was in our data set, we ran the classifying algorithms with the original imbalanced data set, a random undersampling method, and an a Synthetic Minority Over-Sampling Technique (SMOTE), which is an oversampling method.
+We initially evaluated the classifier performance with the original imbalanced data set (without resampling), and hypothesized that it would be associated with low performance, however, we felt it provided an appropriate baseline. 
 
 The undersampling method that we considered is random undersampling. 
 In this method, instances of the majority class are discarded at random until reaches balanced with the minority class \citep{hoens2013imbalanced}. 
 For example, say there are 1000 observations in the majority class, and 100 in the minority class, observations in the majority class will be randomly discarded until this class is also 100. 
 The benefit of this method is that since the data frame is being reduced, it is less costly. 
-However, potentially useful information is discarded, which may make the decision boundary between the majority and minority class less clear, causing a decrease in overall prediction performance \citep{hoens2013imbalanced}. 
+On the other hand, potentially useful information is discarded, which may make the decision boundary between the majority and minority class less clear. 
+We hypothesize this discarding of information may cause a decrease in overall prediction performance \citep{hoens2013imbalanced}. 
 
-Synthetic Minority Over-Sampling Technique (SMOTE), is an oversampling technique which uses interpolation of the minority class to create synthetic data. 
+Next, we handled imbalanced data through resampling the original data set by oversampling the majority class using the SMOTE method, which is a technique that uses interpolation of the minority class to create synthetic data. 
 The process begins by finding the k-nearest neighbors of each observation of the minority class based on some distance measure. 
 Then a point between the minority class observation and one of its nearest neighbors is randomly picked by first finding the difference between the observation and its nearest neighbor. 
 This difference is then multiplied by a random number between 0 and 1. 
-This is then added to the observation, which becomes the new synthetic data point that is then added to the data set \citep{chawla2002smote}.
-In \cite{hu2016classification}, they used k = 5, so that is what we used to create our resampled data set. **I did conduct a grid search over the k-value because I was curious and found that even k = 3 provides 100% classification! I have the output for k = 5 so we can certainly use that, let's just make sure we are consistent - Emily.** 
+That number is then added to the observation, which becomes the new synthetic data point that is then added to the data set \citep{chawla2002smote}.
+Through the use of a hperparameter grid search with MCMC, the number of neighbors chosen was k = 3 [Appendix \ref{app:xgb-tuning}].
 Oversampling tends to have an overfitting problem since now the minority class extends into the majority space, however this generally poses less of an issue with SMOTE \citep{luengo2011addressing}. 
 This was ran using the SMOTE function in the `smotefamily` package in R \citep{smotefamily}.  
 
