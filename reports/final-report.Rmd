@@ -216,8 +216,10 @@ t1[["pH"]] <- getTable1Stats(winequality$pH)
 t1[["Sulphates"]] <- getTable1Stats(winequality$sulphates)
 t1[["Alcohol"]] <- getTable1Stats(winequality$alcohol)
 
+P <- c('< 0.001',	'< 0.001',	'< 0.001',	'< 0.001',	'< 0.001',	'< 0.001',	'0.3496',	'< 0.001',	'< 0.001',	'0.0025',	'< 0.001')
+
 library(magrittr)
-mergeDesc(t1) %>% knitr::kable("latex", digits = 2, escape = F, booktabs = T, linesep = "", align = "c", label = "descriptives-table", caption = "Basic Descriptive Statistics from the Wine Quality Dataset.")
+mergeDesc(t1) %>% cbind(P) %>% knitr::kable("latex", digits = 2, escape = F, booktabs = T, linesep = "", align = "c", label = "descriptives-table", caption = "Basic Descriptive Statistics from the Wine Quality Dataset.")
 ```
 
 # Statistical Methods
@@ -374,6 +376,8 @@ MCMC.results.plot
 + Undersampling really helped increase the classification rate for rare classes.
 + Tuning of XGBoost is not fun.
 + As previously noted, the majority class had 6053 observations whereas the minority class had 444 observations, a ratio of about 13:1. Due to this imbalanced nature of these data, classifying algorithms were biased towards classifying wines as Normal quality, and causing poor predictions for the Low and High quality classes.
++ XGBoost outperforms Random Forest in classifying low and high classes with no resampling and undersampling. Reassigns weights...
++ Future work... (new undersampling methods, try a different wine data set, can this tuned model be used across the industry? etc.)
 
 # Supplementary Material {-}
 
@@ -387,8 +391,12 @@ MCMC.results.plot
 + Importance of cross validation.
 + Interpretation and communication is key!
 + Overall great job describing the methods in an understandable way, maybe a little more coding done in class? The homework was helpful for this!
-+ Instructor was well prepared for class and provided timely feedback.
++ Instructor was well prepared for class and provided timely feedback (actual review of homework).
 + Overall really enjoyed the course!
++ All the material of the course felt accessible, made it easy to learn the materials, and made us want to learn.
++ Improvement of R coding skills (R markdown).
++ Collaboration tools (i.e. GitHub).
++ Time management of writing a paper!
 
 ```{r, include = F}
 # devtools::install_github("crsh/papaja") 
