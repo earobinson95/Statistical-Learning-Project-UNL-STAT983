@@ -350,7 +350,7 @@ Additional model validation should be conducted on wine from other vineyards and
 # Supplementary Material {-}
 
 + **Data:** Data used was from the [UCI Data Repository](https://archive.ics.uci.edu/ml/datasets/Wine+Quality) \citep{UCIdataset}.
-+ **Code:** Access the final analysis code on [GitHub](https://github.com/earobinson95/Statistical-Learning-Project-UNL-STAT983/blob/main/reports/final-classification.R).
++ **Code:** Access the final analysis code on [GitHub](https://github.com/earobinson95/Statistical-Learning-Project-UNL-STAT983/blob/main/reports/final-classification.R) [Appendix \ref{app:code}].
 
 # Course Reflection {-}
 
