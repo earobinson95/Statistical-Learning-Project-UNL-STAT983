@@ -15,7 +15,7 @@ author:
 affiliation:
   - id: a
     institution: Department of Statistics, University of Nebraska - Lincoln
-abstract: Purpose: The ability to assess the quality of wine is essential in the wine industry in order to market and sell a wine. Currently quality assessment is done by the use of human experts, which is costly and time consuming. We examined, through the use of data mining techniques, wine quality assessment through the use of readily available physiochemical wine properties. Methods: Tree-based ensemble methods were tuned to classify quality, which was designated as low, normal, and high. We employed the use of eXtreme Gradient Boosting and Random Forest tree-based ensemble methods. Additionally, due to the imbalanced nature of the quality class for which the majority of the data were classified as normal, undersampling and oversampling resampling techniques were used to evaluate model performance. Results: Utilizing cross-validation techniques, we saw immense benefits of oversampling the training data set. We consistently saw excellent performance and reached 100\% classification rate of all quality classes with both classifiers. Conclusions: These results revealed that oversampling outperformed undersampling and that our two classifiers performed with similar accuracy with XGBoost having a slight advantage in classification of low and high quality when no resampling or undersampling was performed.
+abstract: '**Purpose:** The ability to assess the quality of wine is essential in the wine industry in order to market and sell a wine. Currently quality assessment is done by the use of human experts, which is costly and time consuming. We examined, through the use of data mining techniques, wine quality assessment through the use of readily available physiochemical wine properties. **Methods:** Tree-based ensemble methods were tuned to classify quality, which was designated as low, normal, and high. We employed the use of eXtreme Gradient Boosting and Random Forest tree-based ensemble methods. Additionally, due to the imbalanced nature of the quality class for which the majority of the data were classified as normal, undersampling and oversampling resampling techniques were used to evaluate model performance. **Results:** Utilizing cross-validation techniques, we saw immense benefits of oversampling the training data set. We consistently saw excellent performance and reached 100\% classification rate of all quality classes with both classifiers. **Conclusions:** These results revealed that oversampling outperformed undersampling and that our two classifiers performed with similar accuracy with XGBoost having a slight advantage in classification of low and high quality when no resampling or undersampling was performed.'
 bibliography: references.bib
 output: 
   pdf_document:
@@ -126,7 +126,7 @@ We did not consider removing outliers, so no data points were removed for our fi
 Looking at the boxplots, one can use these to give an idea of which of these predictor variables may be helpful in helping to determine the classification of the wines. 
 For example, for alcohol, the interquartile range of the High category is above that of the Normal and Low class. 
 
-```{r boxplots, fig.height = 4, fig.cap="Distribution of the Predictor Variables"}
+```{r boxplots, fig.height = 5, fig.cap="Distribution of the predictor variables."}
 winequality_noq = winequality[,-1]
 data_long <- melt(winequality_noq)
 data_long %>%
