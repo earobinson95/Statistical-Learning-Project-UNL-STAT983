@@ -13,57 +13,35 @@ library(patchwork)
 
 # Classification Tuning \label{app:tuning}
 
-## XGBoost \label{app:xgb-tuning}
-```{r xgb-tuning, fig.height = 6, echo = F, eval = T}
-
-# No Resampling
-xgbMCMC.none.gridsearch <- read_csv("xgbMCMC.none.gridsearch.csv")%>%
-    filter(accuracyGroup == "accuracy.all") %>%
-  arrange(-mean)
-xgbMCMC.none.gridsearch.plot <- xgbMCMC.none.gridsearch[c(0:10),] %>%
-  mutate(label = paste("Max Depth = ", max.depth, "; Eta = ", eta, "; nround = ", nround, "; nthread = ", nthread, sep = "")) %>%
-ggplot(aes(x = mean, y = reorder(label, mean))) +
-  geom_point() +
-  geom_errorbar(aes(xmin = lower, xmax = upper)) +
-  theme_bw() +
-  scale_y_discrete("") +
-  scale_x_continuous("Overall Accuracy", labels = scales::percent, limits = c(0.90, 1), breaks = seq(0.8, 1, 0.025)) +
-  ggtitle("XGBoost (No resampling)")
-
-# Undersampling
-xgbMCMC.undersample.gridsearch <- read_csv("xgbMCMC.undersample.gridsearch.csv") %>% 
-  filter(accuracyGroup == "accuracy.all", nUndersample == 2000) %>%
-  arrange(-mean)
-xgbMCMC.undersample.gridsearch.plot <- xgbMCMC.undersample.gridsearch[c(0:10),] %>%
-  mutate(label = paste("Max Depth = ", max.depth, "; Eta = ", eta, "; nround = ", nround, "; nthread = ", nthread, " (N = ", nUndersample, ")", sep = "")) %>%
-ggplot(aes(x = mean, y = reorder(label, mean))) +
-  geom_point() +
-  geom_errorbar(aes(xmin = lower, xmax = upper)) +
-  theme_bw() +
-  scale_y_discrete("") +
-  scale_x_continuous("Overall Accuracy", labels = scales::percent, limits = c(0.90, 1), breaks = seq(0.8, 1, 0.025)) +
-  ggtitle("XGBoost (Undersampling)")
-
-# Oversample
-xgbMCMC.oversample.gridsearch <- read_csv("xgbMCMC.oversample.gridsearch.csv") %>%
-    filter(accuracyGroup == "accuracy.all") %>%
-  arrange(-mean)
-xgbMCMC.oversample.gridsearch.plot <- xgbMCMC.oversample.gridsearch[c(0:10),] %>%
-  mutate(label = paste("Max Depth = ", max.depth, "; Eta = ", eta, "; nround = ", nround, "; nthread = ", nthread, " (k = ", kOversample, ")", sep = "")) %>%
-  ggplot(aes(x = mean, y = reorder(label, mean))) +
-    geom_point() +
-    geom_errorbar(aes(xmin = lower, xmax = upper)) +
-    theme_bw() +
-    scale_y_discrete("") +
-    scale_x_continuous("Overall Accuracy", labels = scales::percent, limits = c(0.90, 1), breaks = seq(0.8, 1, 0.025)) +
-    ggtitle("XGBoost (Oversampling)")
-
-xgbMCMC.none.gridsearch.plot /
-xgbMCMC.undersample.gridsearch.plot /
-xgbMCMC.oversample.gridsearch.plot
-```
+Classifiers were tuned on the original training set (no resampling), the undersampled training set, and the oversampled training set by maximizing the overall classification rate:
+$$\text{overall accuracy} = \frac{1}{n}\sum_{i=1}^{n} I_{[\widehat{class_i}=class_i]}$$
+A hyperparameter grid search with Monte Carlo Cross-Validation (MCMC) was used to select tuning parameters (70% training; 30% testing; B = 50).
+The mean, 5th-quantile, and 95th-quantile of the overall correct classification rates are used to evaluate performance on the testing data over the B splits.
 
 ## Random Forest \label{app:rf-tuning}
+
+The Random Forest classifier was tuned by conducting a grid search over the number of trees (ntrees: 200 - 800 by 200) and number of variables randomly selected for splitting at each node (mtry: 2 - 10 by 2). The undersampling technique was conducted with 2000 randomly selected observations from the normal class. The number of nearest neighbors for the oversampling technique was selected by including this parameter in the grid search (k = 3 - 7 by 2). Figure \ref{fig:rf-tuning} below shows the top 10 parameter combinations for Random Forest.
+
+```{r rf-final-mod, eval = F, echo = F}
+rfMCMC.none.gridsearch <- read_csv("rfMCMC.none.gridsearch.csv") %>%
+    filter(accuracyGroup == "accuracy.all") %>%
+  arrange(-mean)
+rfMCMC.undersample.gridsearch <- read_csv("rfMCMC.undersample.gridsearch.csv") %>%
+    filter(accuracyGroup == "accuracy.all", nUndersample == 2000) %>%
+  arrange(-mean)
+rfMCMC.oversample.gridsearch <- read_csv("rfMCMC.oversample.gridsearch.csv") %>%
+    filter(accuracyGroup == "accuracy.all") %>%
+  arrange(-mean)
+rf_final_mods <- rbind(rfMCMC.none.gridsearch[1,],
+                        rfMCMC.undersample.gridsearch[1,],
+                        rfMCMC.oversample.gridsearch[1,]) %>%
+  mutate(label = ifelse(samplingMethod == "none", "No Resampling",
+                        ifelse(samplingMethod == "undersample", paste("Undersampling (n = ", nUndersample, ")", sep = ""),
+                               paste("Oversampling (k = ", kOversample, ")", sep = "")))) %>%
+  select(label, ntree, mtry)
+colnames(rf_final_mods) <- c("Resampling", "N. Trees", "Mtry") 
+rf_final_mods %>% knitr::kable("latex", digits = 2, escape = F, booktabs = T, linesep = "", align = "c", label = "rf-final-mods", caption = "Final tuning parameters for Random Forest classifier as determined by the MCMC hyperparameter grid search.")
+```
 
 ```{r rf-tuning, fig.height = 6, echo = F, eval = T}
 
@@ -113,6 +91,82 @@ rfMCMC.none.gridsearch.plot /
 rfMCMC.undersample.gridsearch.plot /
 rfMCMC.oversample.gridsearch.plot
 ```
+
+## XGBoost \label{app:xgb-tuning}
+
+The XGBoost classifier was tuned by conducting a grid search over maximum tree depth (max.depth: 50 - 250 by 50), step size shrinkage (eta: 0.05, 1, 0.25, 0.5, 0.75, 0.9, 0.95), maximum number of boosting iterations (nround: 2 - 12 by 2), and the number of threads used in parallel computing (nthread: 2 - 12 by 2). The undersampling technique was conducted with 2000 randomly selected observations from the normal class. The number of nearest neighbors for the oversampling technique was selected by including this parameter in the grid search (k = 3 - 7 by 2). Figure \ref{fig:rf-tuning} below shows the top 10 parameter combinations for XGBoost.
+
+```{r xgb-final-mod, eval = F, echo = F}
+xgbMCMC.none.gridsearch <- read_csv("xgbMCMC.none.gridsearch.csv") %>%
+    filter(accuracyGroup == "accuracy.all") %>%
+  arrange(-mean)
+xgbMCMC.undersample.gridsearch <- read_csv("xgbMCMC.undersample.gridsearch.csv") %>%
+    filter(accuracyGroup == "accuracy.all", nUndersample == 2000) %>%
+  arrange(-mean)
+xgbMCMC.oversample.gridsearch <- read_csv("xgbMCMC.oversample.gridsearch.csv") %>%
+    filter(accuracyGroup == "accuracy.all") %>%
+  arrange(-mean)
+xgb_final_mods <- rbind(xgbMCMC.none.gridsearch[1,],
+                        xgbMCMC.undersample.gridsearch[1,],
+                        xgbMCMC.oversample.gridsearch[1,]) %>%
+  mutate(label = ifelse(samplingMethod == "none", "No Resampling",
+                        ifelse(samplingMethod == "undersample", paste("Undersampling (n = ", nUndersample, ")", sep = ""),
+                               paste("Oversampling (k = ", kOversample, ")", sep = "")))) %>%
+  select(label, max.depth, eta, nround, nthread)
+colnames(xgb_final_mods) <- c("Resampling", "Max Depth", "Eta", "Rounds", "Threads") 
+xgb_final_mods %>% knitr::kable("latex", digits = 2, escape = F, booktabs = T, linesep = "", align = "c", label = "xbg-final-mods", caption = "Final tuning parameters for XGBoost classifier as determined by the MCMC hyperparameter grid search.")
+```
+
+```{r xgb-tuning, fig.height = 6, echo = F, eval = T}
+
+# No Resampling
+xgbMCMC.none.gridsearch <- read_csv("xgbMCMC.none.gridsearch.csv")%>%
+    filter(accuracyGroup == "accuracy.all") %>%
+  arrange(-mean)
+xgbMCMC.none.gridsearch.plot <- xgbMCMC.none.gridsearch[c(0:10),] %>%
+  mutate(label = paste("Max Depth = ", max.depth, "; Eta = ", eta, "; nround = ", nround, "; nthread = ", nthread, sep = "")) %>%
+ggplot(aes(x = mean, y = reorder(label, mean))) +
+  geom_point() +
+  geom_errorbar(aes(xmin = lower, xmax = upper)) +
+  theme_bw() +
+  scale_y_discrete("") +
+  scale_x_continuous("Overall Accuracy", labels = scales::percent, limits = c(0.90, 1), breaks = seq(0.8, 1, 0.025)) +
+  ggtitle("XGBoost (No resampling)")
+
+# Undersampling
+xgbMCMC.undersample.gridsearch <- read_csv("xgbMCMC.undersample.gridsearch.csv") %>% 
+  filter(accuracyGroup == "accuracy.all", nUndersample == 2000) %>%
+  arrange(-mean)
+xgbMCMC.undersample.gridsearch.plot <- xgbMCMC.undersample.gridsearch[c(0:10),] %>%
+  mutate(label = paste("Max Depth = ", max.depth, "; Eta = ", eta, "; nround = ", nround, "; nthread = ", nthread, " (N = ", nUndersample, ")", sep = "")) %>%
+ggplot(aes(x = mean, y = reorder(label, mean))) +
+  geom_point() +
+  geom_errorbar(aes(xmin = lower, xmax = upper)) +
+  theme_bw() +
+  scale_y_discrete("") +
+  scale_x_continuous("Overall Accuracy", labels = scales::percent, limits = c(0.90, 1), breaks = seq(0.8, 1, 0.025)) +
+  ggtitle("XGBoost (Undersampling)")
+
+# Oversample
+xgbMCMC.oversample.gridsearch <- read_csv("xgbMCMC.oversample.gridsearch.csv") %>%
+    filter(accuracyGroup == "accuracy.all") %>%
+  arrange(-mean)
+xgbMCMC.oversample.gridsearch.plot <- xgbMCMC.oversample.gridsearch[c(0:10),] %>%
+  mutate(label = paste("Max Depth = ", max.depth, "; Eta = ", eta, "; nround = ", nround, "; nthread = ", nthread, " (k = ", kOversample, ")", sep = "")) %>%
+  ggplot(aes(x = mean, y = reorder(label, mean))) +
+    geom_point() +
+    geom_errorbar(aes(xmin = lower, xmax = upper)) +
+    theme_bw() +
+    scale_y_discrete("") +
+    scale_x_continuous("Overall Accuracy", labels = scales::percent, limits = c(0.90, 1), breaks = seq(0.8, 1, 0.025)) +
+    ggtitle("XGBoost (Oversampling)")
+
+xgbMCMC.none.gridsearch.plot /
+xgbMCMC.undersample.gridsearch.plot /
+xgbMCMC.oversample.gridsearch.plot
+```
+
+\clearpage
 
 # Code \label{app:code}
 
@@ -441,7 +495,7 @@ xgbMCMC.undersample.gridsearch <- xgbMCMC(samplingMethod = "undersample",
                                           trainPct = 0.7, 
                                           B = setB, 
                                           max.depth = seq(50, 250, 50), 
-                                          eta = c(0.5, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95), 
+                                          eta = c(0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95), 
                                           nround = seq(2,12,2), 
                                           nthread = seq(2,12,2)
                                           )
@@ -468,7 +522,7 @@ xgbMCMC.oversample.gridsearch <- xgbMCMC(samplingMethod = "oversample",
                                          trainPct = 0.7, 
                                          B = setB, 
                                          max.depth = seq(50, 250, 50), 
-                                         eta = c(0.5, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95), 
+                                         eta = c(0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95), 
                                          nround = seq(2,12,2), 
                                          nthread = seq(2,12,2)
                                          )

@@ -70,10 +70,17 @@ These techniques also have the advantage of identifying the importantance of the
 
 There have been a few previous papers that have looked into the classification of wine. \cite{cortez2009using} and \cite{gupta2018selection} examined the data using regression methods with their response being a quality rating from 0 to 10, with 0 being the worst quality and 10 being the highest quality. The methods that they employed were multiple regression, neural networks, and support vector machines, and they both found that support vector machines produced the lowest misclassification percentage. In Hu et al [2016], a different approach to this problem was employed where instead of using quality categories from 0-10, they grouped the qualities into three different categories: low, normal, and high. They looked at only data relating to white wine. The classification methods that they employed were Adaptive Boosting and Random Forest. Additionally, due to most of the qualities being classified as “normal”, they employed an oversampling technique, SMOTE in order to develop better classification on the categories with not as much data, in this case “low” and “high”. They found that Random Forest had the lowest misclassification rate of the two at 5.4% \citep{hu2016classification}. 
 
-The goal of this paper, following \cite{hu2016classification} is to train a model that would work well to classify wines into three categories, which are: low quality, normal quality and high quality.  We evaluated two classification techniques, eXtreme Gradient Boosting (XGBoost) and Random Forest.  Given prior investigation of the white wine data showed the Random Forests technique performed well; we would like to test this method using both white and red wine observations. Additionally,  previous papers on the white wine data set have also applied different versions of gradient boosting such as adaptive boost; therefore we will apply XGBoost, an alternative gradient boosting technique. The quality categorization poses a challenge of working with imbalanced classes as there are many more normal quality wines than low or high quality wines [Figure \ref{fig:class-distribution}]. To address this, we will evaluate different resampling techniques in order to determine if resampling improves performance and to identify which resampling method is best. Accuracy of each classification model applied in conjunction with each resampling method was compared. Initially, we first evaluated the classifier performance with no resampling. Since the quality class is highly imbalanced, we hypothesized no resampling to have low performance but provide a baseline. We will then apply a resampling method using SMOTE, which is an algorithm where the minority class (in this case low and high quality), will be oversampled, as this technique seemed to perform well in previous research \citep{hu2016classification}. The final resampling method we applied is a random undersampling method, where majority class data are randomly removed from the data set. We hypothesize random undersampling risks losing valuable information in our model. Accuracy of each classification method and resampling technique was evaluated by the overall correct classification rate and each individual group (low quality, normal quality, and high quality) correct classification rate.
-
-
-
+The goal of this paper, following \cite{hu2016classification} is to train a model that would work well to classify wines into three categories, which are: low quality, normal quality and high quality. 
+We evaluated two classification techniques, eXtreme Gradient Boosting (XGBoost) and Random Forest.
+Given prior investigation of the white wine data showed the Random Forests technique performed well; we would like to test this method using both white and red wine observations. 
+Additionally,  previous papers on the white wine data set have also applied different versions of gradient boosting such as adaptive boost; therefore we will apply XGBoost, an alternative gradient boosting technique. 
+The quality categorization poses a challenge of working with imbalanced classes as there are many more normal quality wines than low or high quality wines [Figure \ref{fig:class-distribution}]. 
+To address this, we will evaluate different resampling techniques in order to determine if resampling improves performance and to identify which resampling method is best. 
+Accuracy of each classification model applied in conjunction with each resampling method was compared. Initially, we first evaluated the classifier performance with no resampling. 
+Since the quality class is highly imbalanced, we hypothesized no resampling to have low performance but provide a baseline. We will then apply a resampling method using SMOTE, which is an algorithm where the minority class (in this case low and high quality), will be oversampled, as this technique seemed to perform well in previous research \citep{hu2016classification}. 
+The final resampling method we applied is a random undersampling method, where majority class data are randomly removed from the data set. 
+We hypothesize random undersampling risks losing valuable information in our model. 
+Accuracy of each classification method and resampling technique was evaluated by the overall correct classification rate and each individual group (low quality, normal quality, and high quality) correct classification rate.
 
 # Data Exploration
 
@@ -94,7 +101,8 @@ winequality <- read.csv("../data/winequality-all.csv")
 
 ```{r class-distribution, fig.height = 2.5, fig.width = 5, fig.align = 'center', fig.cap = "Wine quality class imbalance."}
 winequality %>%
-  mutate(qualityclass = factor(qualityclass, levels = c("Low", "Normal", "High"))) %>%
+  mutate(qualityclass = factor(qualityclass, levels = c("Low", "Normal", "High")),
+         type = factor(type, levels = c("red", "white"), labels = c("Red Wine", "White Wine"))) %>%
   group_by(type, qualityclass) %>%
   summarise(count = n()) %>%
   mutate(prop = count/sum(count)) %>%
@@ -117,10 +125,6 @@ As can be see in this plot, for most of the predictor variables there are points
 We did not consider removing outliers, so no data points were removed for our final analysis. 
 Looking at the boxplots, one can use these to give an idea of which of these predictor variables may be helpful in helping to determine the classification of the wines. 
 For example, for alcohol, the interquartile range of the High category is above that of the Normal and Low class. 
-Figure \ref{fig:correlation} gives the correlation plot for the 11 physiochemical variables, with also the 0-10 scale for the quality of the wines. 
-Correlations that are not considered to be statistically significant are not shown. 
-Most of the correlations seem to be on the lower end of the spectrum, so multicollinearity does not seem to be a huge issue that needs to be addressed among the predictor variables. 
-It also shows that all of the predictor variables have a statistically significant correlation with the response of quality, so they should be helpful for classification. 
 
 ```{r boxplots, fig.height = 4, fig.cap="Distribution of the Predictor Variables"}
 winequality_noq = winequality[,-1]
@@ -134,26 +138,11 @@ ggplot(aes(x = qualityclass, y = value)) +
 ```
 
 
-```{r correlation, fig.height = 4, fig.cap= "Correlation Plot"}
-corr <- round(cor(winequality[c(1, 4:14)]), 3)
-p.mat <- cor_pmat(winequality[c(1, 4:14)])
-ggcorrplot(corr, hc.order = TRUE, 
-           type = "lower", 
-           outline.col = "white",
-           colors = c("#6D9EC1", "white", "#E46726"),
-           p.mat = p.mat,
-           lab = TRUE,
-           insig = "blank",
-           lab_size = 2)
-
-```
-
-Table \ref{tab:descriptives-table} provides physiochemical characteristics stratified by three quality classes. Continuous variables are presented as median and interquartile range (IQR) whereas discrete variables are presented as counts and proportions (%). 
+Additionally, Table \ref{tab:descriptives-table} provides physiochemical characteristics stratified by three quality classes. Continuous variables are presented as median and interquartile range (IQR) whereas discrete variables are presented as counts and proportions (%). 
 Data were stratified by three classes of quality and comparisons were made with the Kruskal-Wallis and chi-square tests for continuous and discrete variables, respectively. 
 We did not conduct post-hoc testing to further investigate pairwise differences. 
-There was statistical evidence of a difference between the three classes of quality for all variables except for pH (P < 0.001, respectively) **I am not seeing any p-values in the table? Going back to the original table in the SJA file I am still not seeing them? -Emily**. 
-The low designation of wine quality was associated with the highest amount of red wine, chlorides, density, fixed acidity, and volatile acidity, and the lowest amount of alcohol, citric acid, free sulfur dioxide, residual sugar, sulphates, and total sulfur dioxide **How was this determined? -Emily**. 
-Again, we did not conduct post-hoc testing.
+There was statistical evidence of a difference between the three classes of quality for all variables except for pH (P < 0.001, respectively)
+The low designation of wine quality was associated with the highest amount of red wine, chlorides, density, fixed acidity, and volatile acidity, and the lowest amount of alcohol, citric acid, free sulfur dioxide, residual sugar, sulphates, and total sulfur dioxide.
 
 ```{r descriptives}
 # https://cran.r-project.org/web/packages/Gmisc/vignettes/Descriptives.html;
@@ -222,6 +211,25 @@ library(magrittr)
 mergeDesc(t1) %>% cbind(P) %>% knitr::kable("latex", digits = 2, escape = F, booktabs = T, linesep = "", align = "c", label = "descriptives-table", caption = "Basic Descriptive Statistics from the Wine Quality Dataset.")
 ```
 
+Figure \ref{fig:correlation} gives the correlation plot for the 11 physiochemical variables, with also the 0-10 scale for the quality of the wines. 
+Correlations that are not considered to be statistically significant are not shown. 
+Most of the correlations seem to be on the lower end of the spectrum, so multicollinearity does not seem to be a huge issue that needs to be addressed among the predictor variables. 
+It also shows that all of the predictor variables have a statistically significant correlation with the response of quality, so they should be helpful for classification. 
+
+```{r correlation, fig.height = 4, fig.cap= "Correlation Plot"}
+corr <- round(cor(winequality[c(1, 4:14)]), 3)
+p.mat <- cor_pmat(winequality[c(1, 4:14)])
+ggcorrplot(corr, hc.order = TRUE, 
+           type = "lower", 
+           outline.col = "white",
+           colors = c("#6D9EC1", "white", "#E46726"),
+           p.mat = p.mat,
+           lab = TRUE,
+           insig = "blank",
+           lab_size = 2)
+
+```
+
 # Statistical Methods
 
 We applied two classification methods, Random Forest and eXtreme Gradient Boosting (XGBoost), on the original training set (no resampling), the undersampled training set, and the oversampled training set. 
@@ -270,14 +278,16 @@ This was ran using the SMOTE function in the `smotefamily` package in R \citep{s
 ## Classification Methods
 
 We evaluated two classifiers, Random Forest and eXtreme Boosting (XGBoost), both tree based ensemble methods.
-First, we utilized the Random Forest algorithm and the associated selection of independent variables for the Random Forest with the `randomForest` and `tuneRF` functions \citep{randomForest}. 
+First, we utilized the Random Forest algorithm and the associated selection of independent variables for the Random Forest with the `randomForest` library in R \citep{randomForest}. 
 In general, a Random Forest algorithm involves the generation of many classification trees, which are each grown through recursive partitioning of independent variable space. 
 During the growth phase for each classification tree, split points of variable space are investigated to maximize the reduction of heterogeneity, which is measured with the Gini impurity index (a reflection of the probability of a variable being wrongly chosen through a stochastic process). 
 Each tree is then grown to a phase where node(s) represent a delineation of data per split point of each variable, and leaves are the terminal points that represent the final classification of data. 
 After the growth phase, a leaf is potentially pruned back to a node to maximize the trade-off between complexity and rate of misclassification. 
 A Random Forest incorporates many trees and subsequently aggregates the predictions made by each tree. 
-We initially selected 500 trees and four variables that could be randomly sampled from to generate a split point at each node. 
-Finally, a stepwise function was created to iteratively conduct the Random Forest algorithm for the purposes of selection of the optimal number of variables to sample from. **Let's talk about tuning of our models, it seems we used different methods - which is fine! Let's just make sure our final results reflect our choice of tuning. -Emily**
+We selected the number of trees and number of variables to be randomly sampled from to generate a split point at each node (mtry) by conducting a hyperparameter grid search with MCMC [Appendix \ref{app:rf-tuning}].
+
+initially selected 500 trees and four variables that could be randomly sampled from to generate a split point at each node. 
+Finally, a stepwise function was created to iteratively conduct the Random Forest algorithm for the purposes of selection of the optimal number of variables to sample from.
 
 We also applied eXtreme Gradient Boosting (XGBoost) using the `xgboost` function with the multiclass classification using the softmax objective function with three classes maximizing the multiclass misclassfication error evaluation metric in the xgboost library \citep{xgboost}. 
 This method combines the tree-based model approach by implementing recursive partitioning and the boosting algorithm which repeatedly optimizes classification methods on the training set. 
@@ -296,48 +306,6 @@ However, with undersampling, XGBoost results in a slight decrease from the basel
 We see this decrease occur from a sacrifice in classification of Normal Quality wines at 97.8\%, but an increase in the Low Quality, 24.1\%, and High Quality, 34.8\% classification rates. 
 We saw immense benefits of oversampling the training data set reaching consistent performance of 100\% classification rate of all quality classes with both classifiers over all MCMC splits. 
 These results indicate that oversampling outperformed undersampling and that accuracy is similar between classifiers with a slight advantage in the XGBoost classifier over Random Forest for the rare quality classification when no resampling or random undersampling is applied. 
-
-```{r rf-final-mod, eval = F}
-rfMCMC.none.gridsearch <- read_csv("rfMCMC.none.gridsearch.csv") %>%
-    filter(accuracyGroup == "accuracy.all") %>%
-  arrange(-mean)
-rfMCMC.undersample.gridsearch <- read_csv("rfMCMC.undersample.gridsearch.csv") %>%
-    filter(accuracyGroup == "accuracy.all", nUndersample == 2000) %>%
-  arrange(-mean)
-rfMCMC.oversample.gridsearch <- read_csv("rfMCMC.oversample.gridsearch.csv") %>%
-    filter(accuracyGroup == "accuracy.all") %>%
-  arrange(-mean)
-rf_final_mods <- rbind(rfMCMC.none.gridsearch[1,],
-                        rfMCMC.undersample.gridsearch[1,],
-                        rfMCMC.oversample.gridsearch[1,]) %>%
-  mutate(label = ifelse(samplingMethod == "none", "No Resampling",
-                        ifelse(samplingMethod == "undersample", paste("Undersampling (n = ", nUndersample, ")", sep = ""),
-                               paste("Oversampling (k = ", kOversample, ")", sep = "")))) %>%
-  select(label, ntree, mtry)
-colnames(rf_final_mods) <- c("Resampling", "N. Trees", "Mtry") 
-rf_final_mods %>% knitr::kable("latex", digits = 2, escape = F, booktabs = T, linesep = "", align = "c", label = "rf-final-mods", caption = "Final tuning parameters for Random Forest classifier as determined by the MCMC hyperparameter grid search.")
-```
-
-```{r xgb-final-mod, eval = F}
-xgbMCMC.none.gridsearch <- read_csv("xgbMCMC.none.gridsearch.csv") %>%
-    filter(accuracyGroup == "accuracy.all") %>%
-  arrange(-mean)
-xgbMCMC.undersample.gridsearch <- read_csv("xgbMCMC.undersample.gridsearch.csv") %>%
-    filter(accuracyGroup == "accuracy.all", nUndersample == 2000) %>%
-  arrange(-mean)
-xgbMCMC.oversample.gridsearch <- read_csv("xgbMCMC.oversample.gridsearch.csv") %>%
-    filter(accuracyGroup == "accuracy.all") %>%
-  arrange(-mean)
-xgb_final_mods <- rbind(xgbMCMC.none.gridsearch[1,],
-                        xgbMCMC.undersample.gridsearch[1,],
-                        xgbMCMC.oversample.gridsearch[1,]) %>%
-  mutate(label = ifelse(samplingMethod == "none", "No Resampling",
-                        ifelse(samplingMethod == "undersample", paste("Undersampling (n = ", nUndersample, ")", sep = ""),
-                               paste("Oversampling (k = ", kOversample, ")", sep = "")))) %>%
-  select(label, max.depth, eta, nround, nthread)
-colnames(xgb_final_mods) <- c("Resampling", "Max Depth", "Eta", "Rounds", "Threads") 
-xgb_final_mods %>% knitr::kable("latex", digits = 2, escape = F, booktabs = T, linesep = "", align = "c", label = "xbg-final-mods", caption = "Final tuning parameters for XGBoost classifier as determined by the MCMC hyperparameter grid search.")
-```
 
 ```{r accuracy-results, fig.height = 6, fig.cap = "MCMC accuracy results for each classifier applied to each resampling technique."}
 
@@ -367,15 +335,17 @@ MCMC.results.plot
 
 # Discussion and Conclusion
 
-**Add discusssion about the project here. Beginning a bulletted list of possible discussion points.**
-
-+ Random Forest rocks!
-+ WOW, look at that oversampling method!
-+ Undersampling really helped increase the classification rate for rare classes.
-+ Tuning of XGBoost is not fun.
-+ As previously noted, the majority class had 6053 observations whereas the minority class had 444 observations, a ratio of about 13:1. Due to this imbalanced nature of these data, classifying algorithms were biased towards classifying wines as Normal quality, and causing poor predictions for the Low and High quality classes.
-+ XGBoost outperforms Random Forest in classifying low and high classes with no resampling and undersampling. Reassigns weights...
-+ Future work... (new undersampling methods, try a different wine data set, can this tuned model be used across the industry? etc.)
+As previously noted, due to the imbalanced nature of the quality class, classifying algorithms were biased towards categorizing wines as Normal quality, and causing poor predictions for the Low and High quality classes. 
+By employing resampling methods, we increased the classification of the minority classes. 
+While random undersampling showed improvement in the classification rates of the low and high classes, oversampling using the SMOTE algorithm outperformed both the undersampling method and no resampling. 
+After tuning our classifiers, we reached a consistent perfect quality classification for both red and white wines. 
+Both classifiers, Random Forest and XGBoost, performed similar in overall performance. 
+We see a slight advantage of XGBoost in the classification of the rare classes when undersampling of the training data or no resampling of the training data is applied. 
+This advantage arises from the boosting technique of reassigning higher weights to observations misclassified at each boosting iteration. 
+While XGBoost indicated a slight advantage, tuning the classifier was more intensive than the tuning required to implement the Random Forest classifier. 
+Our results support previous research of strong performance from ensemble based methods. 
+We saw our best classification rates when applying the SMOTE oversampling algorithm to the training data set. Future research in alternate undersampling methods is necessary to provide a comparison against the random undersampling method used in this paper.
+Additional model validation should be conducted on wine from other vineyards and regions in order to implement the use of a tuned model across the wine industry for quality classification.
 
 # Supplementary Material {-}
 
@@ -384,7 +354,18 @@ MCMC.results.plot
 
 # Course Reflection {-}
 
-We have learned multiple lessons from this course and this project! From the paper specificially, we made a point of using this opportunity to learn some new technical skills on top of methods. For example, we were able to utilize some collaboration tools, like GitHub, to make working on the project as a group more seamless. Additionally, through this project and the homeworks, we were able to improve our R coding skills, especially with R Markdown. Futhermore, the project also reiterated the importance of cross validation and the tuning of the models, as we saw increase in our performance when we spent some time working on the finding the best tuning parameters. Having an proposal due weeks before the final project due date was also helpul in pacing us through this project, as time management is an important skill. As for the course, we really appciated how well preparted you were for each lecture and that we recieved timely feedback (like going through some of the theory homework questions in class). We also like how all of the material of the course felt accessibles, which made it easy to follow along and learn. This also helped with the desire to learn, as the methods were described in an understandable way. We also liked how there was a heavy emphasis on the importance of interpretation and communication, as the use of complex methods is of no use if readers are not able to understand it. This practice with communication will help in future careers. The only suggestion we had was to potentially spend some more time on coding in class, however the homework as very helpful with this aspect. Overall we really enjoyed the course and have learned many valuable things from it!  
+We have learned multiple lessons from this course and this project! 
+From the paper specifically, we made a point of using this opportunity to learn some new technical skills on top of methods. 
+For example, we were able to utilize some collaboration tools, like GitHub, to make working on the project as a group more seamless. 
+Additionally, through this project and the homework assignments, we were able to improve our R coding skills, especially with R Markdown. 
+Furthermore, the project also reiterated the importance of cross validation and the tuning of the models, as we saw increase in our performance when we spent some time working on the finding the best tuning parameters. 
+Having a proposal due weeks before the final project due date was also helpful in pacing us through this project, as time management is an important skill. 
+As for the course, we really appreciated how well prepared you were for each lecture and that we received timely feedback (like going through some of the theory homework questions in class). 
+We also like how all of the material of the course felt accessible, which made it easy to follow along and learn. This also helped with the desire to learn, as the methods were described in an understandable way. 
+We enjoyed the heavy emphasis on the importance of interpretation and communication, as the use of complex methods is of no use if readers are not able to understand it. 
+This practice with communication will help in future careers. 
+The only suggestion we had was to potentially spend some more time on coding in class, however the homework as very helpful with this aspect. 
+Overall we really enjoyed the course and have learned many valuable things from it!  
 
 
 ```{r, include = F}
