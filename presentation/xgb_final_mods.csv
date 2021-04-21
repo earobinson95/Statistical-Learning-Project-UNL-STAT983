@@ -1,0 +1,4 @@
+"Resampling","Max Depth","Eta","Rounds","Threads"
+"No Resampling",50,0.75,12,8
+"Undersampling (n = 2000)",50,0.5,12,12
+"Oversampling (k = 3)",50,0.5,10,2

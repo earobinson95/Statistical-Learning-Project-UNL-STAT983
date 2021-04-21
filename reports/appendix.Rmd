@@ -117,6 +117,7 @@ colnames(xgb_final_mods) <- c("Resampling", "Max Depth", "Eta", "Rounds", "Threa
 xgb_final_mods %>% knitr::kable("latex", digits = 2, escape = F, booktabs = T, linesep = "", align = "c", label = "xbg-final-mods", caption = "Final tuning parameters for XGBoost classifier as determined by the MCMC hyperparameter grid search.")
 ```
 
+
 ```{r xgb-tuning, fig.height = 6, echo = F, eval = T}
 
 # No Resampling

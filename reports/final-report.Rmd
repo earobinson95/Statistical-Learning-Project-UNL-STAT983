@@ -284,10 +284,7 @@ After the growth phase, a leaf is potentially pruned back to a node to maximize 
 A Random Forest incorporates many trees and subsequently aggregates the predictions made by each tree. 
 We selected the number of trees and number of variables to be randomly sampled from to generate a split point at each node (mtry) by conducting a hyperparameter grid search with MCMC [Appendix \ref{app:rf-tuning}].
 
-initially selected 500 trees and four variables that could be randomly sampled from to generate a split point at each node. 
-Finally, a stepwise function was created to iteratively conduct the Random Forest algorithm for the purposes of selection of the optimal number of variables to sample from.
-
-We also applied eXtreme Gradient Boosting (XGBoost) using the `xgboost` function with the multiclass classification using the softmax objective function with three classes maximizing the multiclass misclassfication error evaluation metric in the xgboost library \citep{xgboost}. 
+We also applied eXtreme Gradient Boosting (XGBoost) using the `xgboost` function with the multiclass classification using the softmax objective function with three classes minimizing the multiclass misclassfication error evaluation metric in the xgboost library \citep{xgboost}. 
 This method combines the tree-based model approach by implementing recursive partitioning and the boosting algorithm which repeatedly optimizes classification methods on the training set. 
 In repeated optimization, a weak classifier is fit on the original data set with each observation having equal weight, the weight is then calculated for the current model based on the error rate and observations are assigned new weights used to fit the next weak classifier. 
 This process is repeated for a final boosted classifier given by the weighted sum of our weak classifiers. 
