@@ -64,7 +64,6 @@ In addition, taste is the least understood of all human senses, thus there is th
 Unlike sensory tests, laboratory tests for measuring the physiochemical characteristics of wine such as acidity and alcohol content do not require a human expert. 
 The relationship between physiochemcial and sensory analysis is not well understood. 
 Recently, research in the food industry has utilized statistical learning techniques to evaluate widely available characteristics of wine. 
-This type of evaluation allows the automation of quality assessment processes by minimizing the need of human experts \citep{gupta2018selection}. 
 Additionally, if human experts are used, the classification model can be used to speed up and improve their quality assessment \citep{cortez2009using}. 
 These techniques also have the advantage of identifying the importantance of the phsiochemical characteristics that have an impact on the quality of wine as determined by a sensory test.
 
@@ -241,7 +240,7 @@ The MCMC algorithm repeatedly splits the data into training and testing sets (B 
 The undersampling and oversampling techniques as described below are then applied to the training set to obtain a final resampled training data set. 
 For each split, the final resampled training data set is used to build the model; then accuracy is evaluated on the corresponding testing data set. 
 The mean, 5th-quantile, and 95th-quantile of the correct classification rates are used to evaluate performance over the B splits. 
-Both classification methods were tuned by conducting a hyperparameter grid search with MCMC (B = 50) to minimize the overall accuracy [Appendix \ref{app:tuning}]; parallel computing with the `furrr` package in R was conducted to minimize computing time \citep{furrr}.
+Both classification methods were tuned by conducting a hyperparameter grid search with MCMC (B = 50) to maximize the overall accuracy [Appendix \ref{app:tuning}]; parallel computing with the `furrr` package in R was conducted to minimize computing time \citep{furrr}.
 
 ## Resampling Techniques
 
