@@ -25,7 +25,7 @@
 ### reports
 
 + [proposal](https://earobinson95.github.io/Statistical-Learning-Project-UNL-STAT983/reports/proposal.pdf)
-+ [final-report](https://earobinson95.github.io/Statistical-Learning-Project-UNL-STAT983/reports/final-report.pdf)
++ [final-report](https://earobinson95.github.io/Statistical-Learning-Project-UNL-STAT983/reports/Kleffner-Aurit-Robinson-983-Final-Report.pdf)
 + references
 
 ### results
